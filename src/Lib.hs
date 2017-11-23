@@ -21,20 +21,20 @@ alphabet =
 completeInstasearch :: String -> Int -> IO [String]
 completeInstasearch query maxWordCount = do
   (_, initialResults) <- instasearch query
-  results <- runCompleteInstasearch (query ++ " ") maxWordCount (fromList initialResults)
+  results <- runCompleteInstasearch (query ++ " ") (fromList initialResults)
   pure $ sort (filter (\r -> length (words r) <= maxWordCount) results)
 
-runCompleteInstasearch :: String -> Int -> Set String -> IO [String]
-runCompleteInstasearch query maxWordCount seen = do
-  print $ show (length (filter (\r -> length (words r) <= maxWordCount) (elems seen))) ++ " - " ++ query
+runCompleteInstasearch :: String -> Set String -> IO [String]
+runCompleteInstasearch query seen = do
+  print $ show (length (filter (\r -> length (words r) <= 2) (elems seen))) ++ " - " ++ query
   results <- sequence $ fmap instasearch (generateQueries query seen)
   let newSeen = seen `union` fromList (concatMap snd results)
-  recursiveResults <- sequence $ fmap (\r -> runCompleteInstasearch r maxWordCount newSeen) (filterResults results maxWordCount newSeen)
+  recursiveResults <- sequence $ fmap (\r -> runCompleteInstasearch r newSeen) (filterResults results)
   pure $ concatMap snd results ++ concat recursiveResults
 
 instasearch :: String -> IO (String, [String])
 instasearch search = do
-  threadDelay (1 * 1000000)
+  threadDelay 500000
   let opts = defaults & param "q" .~ [pack search] & param "client" .~ ["firefox"]
   response <- getWith opts "https://www.google.com/complete/search"
   pure $ parseResponse (response ^. responseBody) search
@@ -44,12 +44,9 @@ generateQueries baseQuery seen =
   let isValid q = notMember q seen && not ("  " `isSuffixOf` q)
   in filter isValid (fmap (snoc baseQuery) alphabet)
 
-filterResults :: [(String, [String])] -> Int -> Set String -> [String]
-filterResults results maxWordCount seen =
-  let
-    deepKeys = fmap fst (filter (\result -> length (snd result) == 10) results)
-    validKeys = filter (\val -> length (words val) <= maxWordCount) deepKeys
-  in elems $ difference (fromList validKeys) seen
+filterResults :: [(String, [String])] -> [String]
+filterResults results =
+  fmap fst (filter (\result -> length (snd result) == 10) results)
 
 parseResponse :: ByteString -> String -> (String, [String])
 parseResponse response def =
