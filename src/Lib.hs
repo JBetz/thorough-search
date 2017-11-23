@@ -26,11 +26,10 @@ completeInstasearch query maxWordCount = do
 
 runCompleteInstasearch :: String -> IO [String]
 runCompleteInstasearch query = do
+  print query
   results <- sequence $ fmap instasearch (expandQuery query)
   recursiveResults <- sequence $ fmap runCompleteInstasearch (findExpandables results)
-  let totalResults = concatMap snd results `union` concat recursiveResults
-  print $ show (length totalResults) ++ " from " ++ query
-  pure totalResults
+  pure $ concatMap snd results `union` concat recursiveResults
 
 instasearch :: String -> IO (String, [String])
 instasearch search = do
