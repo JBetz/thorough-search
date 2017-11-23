@@ -10,8 +10,8 @@ import Control.Lens
 import Control.Concurrent
 import Data.Aeson (eitherDecode)
 import Data.ByteString.Lazy (ByteString)
-import Data.List (isSuffixOf, sort)
-import Data.Set (Set, fromList, union, difference, empty, elems, notMember)
+import Data.List (isSuffixOf, sort, union)
+import qualified Data.Set as S
 import Data.Text (pack)
 
 alphabet :: String
@@ -21,16 +21,16 @@ alphabet =
 completeInstasearch :: String -> Int -> IO [String]
 completeInstasearch query maxWordCount = do
   (_, initialResults) <- instasearch query
-  results <- runCompleteInstasearch (query ++ " ") (fromList initialResults)
-  pure $ sort (filter (\r -> length (words r) <= maxWordCount) results)
+  results <- runCompleteInstasearch (query ++ " ")
+  pure $ sort (filter (\r -> length (words r) <= maxWordCount) (initialResults `union` results))
 
-runCompleteInstasearch :: String -> Set String -> IO [String]
-runCompleteInstasearch query seen = do
-  print $ show (length (filter (\r -> length (words r) <= 2) (elems seen))) ++ " - " ++ query
+runCompleteInstasearch :: String -> IO [String]
+runCompleteInstasearch query = do
   results <- sequence $ fmap instasearch (expandQuery query)
-  let newSeen = seen `union` fromList (concatMap snd results)
-  recursiveResults <- sequence $ fmap (\r -> runCompleteInstasearch r newSeen) (filterResults results)
-  pure $ concatMap snd results ++ concat recursiveResults
+  recursiveResults <- sequence $ fmap runCompleteInstasearch (findExpandables results)
+  let totalResults = concatMap snd results `union` concat recursiveResults
+  print $ show (length totalResults) ++ " from " ++ query
+  pure totalResults
 
 instasearch :: String -> IO (String, [String])
 instasearch search = do
@@ -44,8 +44,8 @@ expandQuery baseQuery =
   let isValid q = "  " `isSuffixOf` q
   in filter isValid (fmap (snoc baseQuery) alphabet)
 
-filterResults :: [(String, [String])] -> [String]
-filterResults results =
+findExpandables :: [(String, [String])] -> [String]
+findExpandables results =
   fmap fst (filter (\result -> length (snd result) == 10) results)
 
 parseResponse :: ByteString -> String -> (String, [String])
