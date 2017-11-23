@@ -24,6 +24,7 @@ completeInstasearch search =
 
 runCompleteInstasearch :: String -> Set String -> IO [String]
 runCompleteInstasearch query seen = do
+  print $ query ++ " " ++ show (length seen)
   results <- sequence $ fmap instasearch (generateQueries query seen)
   let newSeen = seen `union` fromList (concatMap snd results)
   recursiveResults <- sequence $ fmap (`runCompleteInstasearch` newSeen) (filterResults results newSeen)
@@ -43,11 +44,13 @@ generateQueries baseQuery seen =
 
 filterResults :: [(String, [String])] -> Set String -> [String]
 filterResults results seen =
-  let keys = fmap fst (filter (\result -> length (snd result) == 10) results)
-  in elems $ difference (fromList keys) seen
+  let
+    deepKeys = fmap fst (filter (\result -> length (snd result) == 10) results)
+    validKeys = filter (\val -> length (words val) <= 3) deepKeys
+  in elems $ difference (fromList validKeys) seen
 
 parseResponse :: ByteString -> String -> (String, [String])
 parseResponse response def =
   case eitherDecode response :: Either String (String, [String]) of
     Left err -> (def, [])
-    Right (key, vals) -> (key, filter (\val -> length (words val) <= 3) vals)
+    Right (key, vals) -> (key, vals)
