@@ -16,16 +16,17 @@ import Data.Text (pack)
 
 alphabet :: String
 alphabet =
-  " abcdefghijklmnopqrstuvwzyz"
+  "abcdefghijklmnopqrstuvwzyz"
 
 completeInstasearch :: String -> Int -> IO [String]
-completeInstasearch search maxWordCount = do
-  results <- runCompleteInstasearch search maxWordCount empty
+completeInstasearch query maxWordCount = do
+  (_, initialResults) <- instasearch query
+  results <- runCompleteInstasearch (query ++ " ") maxWordCount (fromList initialResults)
   pure $ sort (filter (\r -> length (words r) <= maxWordCount) results)
 
 runCompleteInstasearch :: String -> Int -> Set String -> IO [String]
 runCompleteInstasearch query maxWordCount seen = do
-  print $ show (length seen) ++ " - " ++ query
+  print $ show (length (filter (\r -> length (words r) <= maxWordCount) (elems seen))) ++ " - " ++ query
   results <- sequence $ fmap instasearch (generateQueries query seen)
   let newSeen = seen `union` fromList (concatMap snd results)
   recursiveResults <- sequence $ fmap (\r -> runCompleteInstasearch r maxWordCount newSeen) (filterResults results maxWordCount newSeen)
