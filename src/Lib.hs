@@ -27,7 +27,7 @@ completeInstasearch query maxWordCount = do
 runCompleteInstasearch :: String -> Set String -> IO [String]
 runCompleteInstasearch query seen = do
   print $ show (length (filter (\r -> length (words r) <= 2) (elems seen))) ++ " - " ++ query
-  results <- sequence $ fmap instasearch (generateQueries query)
+  results <- sequence $ fmap instasearch (expandQuery query)
   let newSeen = seen `union` fromList (concatMap snd results)
   recursiveResults <- sequence $ fmap (\r -> runCompleteInstasearch r newSeen) (filterResults results)
   pure $ concatMap snd results ++ concat recursiveResults
@@ -39,8 +39,8 @@ instasearch search = do
   response <- getWith opts "https://www.google.com/complete/search"
   pure $ parseResponse (response ^. responseBody) search
 
-generateQueries :: String -> [String]
-generateQueries baseQuery =
+expandQuery :: String -> [String]
+expandQuery baseQuery =
   let isValid q = "  " `isSuffixOf` q
   in filter isValid (fmap (snoc baseQuery) alphabet)
 
