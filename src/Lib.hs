@@ -41,7 +41,7 @@ instasearch search = do
 
 expandQuery :: String -> [String]
 expandQuery baseQuery =
-  let isValid q = "  " `isSuffixOf` q
+  let isValid q = not ("  " `isSuffixOf` q)
   in filter isValid (fmap (snoc baseQuery) alphabet)
 
 findExpandables :: [(String, [String])] -> [String]
