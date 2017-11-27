@@ -1,49 +1,48 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Lib
-    ( autocomplete
-    , recursiveAutocomplete
-    ) where
+  ( autocomplete
+  , recursiveAutocomplete
+  ) where
 
-import Network.Wreq
-import Control.Lens
-import Control.Concurrent
-import Control.Exception
-import Data.Aeson (eitherDecode)
-import Data.ByteString.Lazy (ByteString)
-import Data.List (isSuffixOf, sort, union)
-import qualified Data.Set as S
-import Data.Text (pack)
+import           Control.Concurrent
+import           Control.Exception
+import           Control.Lens
+import           Data.Aeson           (eitherDecode)
+import           Data.ByteString.Lazy (ByteString)
+import           Data.List            (isSuffixOf, sort, union)
+import qualified Data.Set             as S
+import           Data.Text            (pack)
+import           Network.HTTP.Client  (HttpException)
+import           Network.Wreq
 
 alphabet :: String
-alphabet =
-  "abcdefghijklmnopqrstuvwxyz"
+alphabet = "abcdefghijklmnopqrstuvwxyz"
 
 recursiveAutocomplete :: String -> IO [String]
 recursiveAutocomplete query = do
   (_, initialResults) <- autocomplete query
-  results <- runRecursiveAutocomplete (query ++ " ")
+  results <- runRecAutocomplete (query ++ " ")
   pure $ sort (initialResults `union` results)
 
-runRecursiveAutocomplete :: String -> IO [String]
-runRecursiveAutocomplete query = do
+runRecAutocomplete :: String -> IO [String]
+runRecAutocomplete query = do
   print query
   results <- sequence $ fmap autocompleteWithRetry (expandQuery query)
-  recursiveResults <- sequence $ fmap runRecursiveAutocomplete (findExpandables results)
-  pure $ concatMap snd results `union` concat recursiveResults
+  recResults <- sequence $ fmap runRecAutocomplete (findExpandables results)
+  pure $ concatMap snd results `union` concat recResults
 
 autocompleteWithRetry :: String -> IO (String, [String])
 autocompleteWithRetry query =
-  catch (autocomplete query)
-        (\e -> do
-          print (e :: IOException)
-          msThreadDelay 30000
-          autocomplete query
-        )
+  catch
+    (autocomplete query)
+    (\e -> do
+       print (e :: HttpException)
+       msThreadDelay 30000
+       autocomplete query)
 
 autocomplete :: String -> IO (String, [String])
 autocomplete query = do
-  msThreadDelay 25
   let opts = defaults & param "q" .~ [pack query] & param "client" .~ ["firefox"]
   response <- getWith opts "https://www.google.com/complete/search"
   pure $ parseResponse (response ^. responseBody) query
@@ -60,9 +59,8 @@ findExpandables results =
 parseResponse :: ByteString -> String -> (String, [String])
 parseResponse response def =
   case eitherDecode response :: Either String (String, [String]) of
-    Left err -> (def, [])
+    Left err          -> (def, [])
     Right (key, vals) -> (key, vals)
 
 msThreadDelay :: Int -> IO ()
-msThreadDelay ms =
-  threadDelay $ ms * 1000
+msThreadDelay ms = threadDelay $ ms * 1000
