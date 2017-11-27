@@ -20,10 +20,11 @@ library
                      , aeson
                      , bytestring
                      , containers
-                     , wreq
+                     , http-client
                      , lens
                      , lens-aeson
                      , text
+                     , wreq
   default-language:    Haskell2010
 
 executable gac
