@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scowl
-  ( hasWord
-  , loadWordsFromScowl
+  ( loadWordsFromScowl
   , Size(..)
   ) where
 
@@ -36,11 +35,6 @@ show size =
     S70 -> 70
     S80 -> 80
     S95 -> 95
-
-hasWord :: String -> IO [String] -> IO Bool
-hasWord word ioList = do
-  wordList <- ioList
-  pure $ elem word wordList
 
 loadWordsFromScowl :: Size -> IO [String]
 loadWordsFromScowl size = do
