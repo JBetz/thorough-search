@@ -1,1 +1,1 @@
-# instasearch
+# thorough-search
