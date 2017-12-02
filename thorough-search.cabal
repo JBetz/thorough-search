@@ -16,6 +16,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Config
+                     , Instasearch
                      , Persistence
                      , Scowl
   build-depends:       base >= 4.7 && < 5
@@ -39,8 +40,9 @@ executable ts
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
-                     , google-autocomplete
+                     , thorough-search
                      , monad-logger
+                     , mtl
                      , persistent-sqlite
                      , text
                      , utf8-string
