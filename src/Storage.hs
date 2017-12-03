@@ -8,9 +8,10 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 
-module Persistence
+module Storage
   ( Result
   , Query
+  , connStr
   , insertResult
   , selectResults
   , migrateAll
@@ -21,6 +22,7 @@ module Persistence
 import           Config
 import           Control.Monad.Reader
 import           Data.Pool
+import           Data.Text               (Text)
 import           Database.Persist
 import           Database.Persist.Sql    (Key, SqlBackend, count, insertUnique,
                                           runSqlPool, (==.))
@@ -41,6 +43,9 @@ Query
     deriving Show
 |]
 
+connStr :: Text
+connStr = "file:./output/autocomplete.db"
+
 insertResult :: (String, [String]) -> App [Maybe (Key Result)]
 insertResult result = do
   config <- ask
@@ -54,8 +59,7 @@ selectResults = do
   config <- ask
   let db = connectionPool config
   let bq = baseQuery config
-  entityResults <-
-    runSqlPool (selectList [ResultBaseQuery ==. bq] []) db
+  entityResults <- runSqlPool (selectList [ResultBaseQuery ==. bq] []) db
   pure $ fmap entityVal entityResults
 
 ranQuery :: String -> App Bool
