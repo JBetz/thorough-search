@@ -11,6 +11,5 @@ type App = ReaderT Config IO
 
 data Config = Config
   { baseQuery      :: String
-  , wordList       :: [String]
   , connectionPool :: Pool SqlBackend
   }
