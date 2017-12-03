@@ -33,18 +33,15 @@ toInt size = read $ drop 1 (show size)
 fromInt :: Int -> Size
 fromInt int = read $ "S" ++ show int
 
-filterResults :: [String] -> [String] -> App [String]
-filterResults results scowlList = do
-  config <- ask
-  let bq = baseQuery config
-  let filteredResults = do
-        result <- results
-        let rWords = words result
-        guard $
-          (length rWords <= (length . words) bq + 1) &&
-          (bq `isPrefixOf` head rWords) && null (tail rWords \\ scowlList)
-        pure result
-  pure filteredResults
+filterResults :: String -> [String] -> [String] -> [String]
+filterResults bq results scowlList = do
+  result <- results
+  let rWords = words result
+  let bqWords = words bq
+  guard $
+    (length rWords <= length bqWords + 1) &&
+    (bq == head rWords) && null (tail rWords \\ scowlList)
+  pure result
 
 loadWordsFromScowl :: Size -> IO [[String]]
 loadWordsFromScowl size = traverse loadWordsFromFile (enumFromTo S10 size)
@@ -55,8 +52,8 @@ loadWordsFromFile size = do
   fileContents <- readFile fileName
   pure $ lines fileContents
 
-writeWordsToFile :: String -> [String] -> [IO ()]
-writeWordsToFile baseQuery ws = do
+writeWordsToFile :: String -> [String] -> IO [()]
+writeWordsToFile baseQuery ws = sequence $ do
   let fileName = "./output/" ++ baseQuery ++ show (length ws) ++ ".txt"
   word <- sort ws
   pure $ appendFile fileName (word ++ "\n")

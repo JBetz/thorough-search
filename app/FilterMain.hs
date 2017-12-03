@@ -27,11 +27,7 @@ main = do
   totalResults <- runReaderT selectResults config
   print $ show (length totalResults) ++ " total results"
   let extractedResults = fmap resultValue totalResults
-  filteredResults <-
-    traverse
-      (\ws -> runReaderT (filterResults extractedResults ws) config)
-      wordLists
-  let output = do
-        result <- filteredResults
-        pure $ writeWordsToFile baseQuery result
+  let filteredResults =
+        fmap (filterResults baseQuery extractedResults) wordLists
+  output <- traverse (writeWordsToFile baseQuery) filteredResults
   print $ show (length output) ++ " filtered results"
