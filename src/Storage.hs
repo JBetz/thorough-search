@@ -47,18 +47,14 @@ connStr :: Text
 connStr = "file:./output/autocomplete.db"
 
 insertResult :: (String, [String]) -> App [Maybe (Key Result)]
-insertResult result = do 
-  config <- ask
-  let db = connectionPool config
-  let bq = baseQuery config
+insertResult result = do
+  (Config bq db) <- ask
   runSqlPool (insertUnique (Query (fst result))) db
   traverse (\r -> runSqlPool (insertUnique (Result bq r)) db) (snd result)
 
 selectResults :: App [Result]
 selectResults = do
-  config <- ask
-  let db = connectionPool config
-  let bq = baseQuery config
+  (Config bq db) <- ask
   entityResults <- runSqlPool (selectList [ResultBaseQuery ==. bq] []) db
   pure $ fmap entityVal entityResults
 
