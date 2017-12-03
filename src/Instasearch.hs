@@ -21,7 +21,7 @@ import           Database.Persist.Sql (Key, SqlBackend, count, insertUnique,
                                        runSqlPool, (==.))
 import           Network.HTTP.Client  (HttpException)
 import           Network.Wreq
-import           Persistence
+import           Storage
 
 alphabet :: String
 alphabet = "abcdefghijklmnopqrstuvwxyz"
