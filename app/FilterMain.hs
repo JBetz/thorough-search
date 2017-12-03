@@ -6,15 +6,12 @@ import           Config
 import           Control.Monad.Logger    (runNoLoggingT)
 import           Control.Monad.Reader
 import           Data.List               (isPrefixOf, sort, (\\))
-import           Data.Text               (Text)
 import           Database.Persist.Sqlite (createSqlitePool, runMigration,
                                           runSqlPool)
-import           Debug.Trace
 import           Instasearch
 import           Scowl
 import           Storage
 import           System.Environment      (getArgs)
-import           System.IO.Unsafe
 
 main :: IO ()
 main = do

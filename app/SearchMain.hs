@@ -5,8 +5,6 @@ module SearchMain where
 import           Config
 import           Control.Monad.Logger    (runNoLoggingT)
 import           Control.Monad.Reader
-import           Data.List               (isPrefixOf, sort, (\\))
-import           Data.Text               (Text)
 import           Database.Persist.Sqlite (createSqlitePool, runMigration,
                                           runSqlPool)
 import           Instasearch
