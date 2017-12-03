@@ -33,14 +33,15 @@ toInt size = read $ drop 1 (show size)
 fromInt :: Int -> Size
 fromInt int = read $ "S" ++ show int
 
-filterResults :: String -> [String] -> [String] -> [String]
-filterResults bq results scowlList = do
+filterResults :: String -> [String] -> [String] -> [String] -> [String]
+filterResults bq results totalResults scowlList = do
   result <- results
   let rWords = words result
   let bqWords = words bq
   guard $
     (length rWords <= length bqWords + 1) &&
-    (bq == head rWords) && null (tail rWords \\ scowlList)
+    (bq == head rWords) && null (tail rWords \\ scowlList) &&
+    (init result `notElem` totalResults)
   pure result
 
 loadWordsFromScowl :: Size -> IO [[String]]
@@ -53,7 +54,8 @@ loadWordsFromFile size = do
   pure $ lines fileContents
 
 writeWordsToFile :: String -> [String] -> IO [()]
-writeWordsToFile baseQuery ws = sequence $ do
-  let fileName = "./output/" ++ baseQuery ++ show (length ws) ++ ".txt"
-  word <- sort ws
-  pure $ appendFile fileName (word ++ "\n")
+writeWordsToFile baseQuery ws =
+  sequence $ do
+    let fileName = "./output/" ++ baseQuery ++ show (length ws) ++ ".txt"
+    word <- sort ws
+    pure $ appendFile fileName (word ++ "\n")

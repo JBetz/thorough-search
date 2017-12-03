@@ -28,6 +28,7 @@ main = do
   print $ show (length totalResults) ++ " total results"
   let extractedResults = fmap resultValue totalResults
   let filteredResults =
-        fmap (filterResults baseQuery extractedResults) wordLists
-  output <- traverse (writeWordsToFile baseQuery) filteredResults
+        fmap (filterResults baseQuery extractedResults extractedResults) wordLists
+  output <-
+    traverse (writeWordsToFile baseQuery) filteredResults
   print $ show (length output) ++ " filtered results"
