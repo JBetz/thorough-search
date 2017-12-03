@@ -34,10 +34,8 @@ recursiveInstasearch query = do
   if alreadyRan
     then pure []
     else do
-      results <-
-        liftIO $ sequence $ fmap instasearchWithRetry (expandQuery query)
-      recResults <-
-        sequence $ fmap recursiveInstasearch (findExpandables results)
+      results <- liftIO $ traverse instasearchWithRetry (expandQuery query)
+      recResults <- traverse recursiveInstasearch (findExpandables results)
       dbResults <- traverse insertResult results
       pure $ join dbResults `union` join recResults
 
@@ -64,7 +62,7 @@ expandQuery baseQuery =
 
 findExpandables :: [(String, [String])] -> [String]
 findExpandables results =
-  fmap fst (filter (\result -> length (snd result) == 10) results)
+  fmap fst (filter (\r -> length (snd r) == 10 && length ((last . words . fst) r) <= 4) results)
 
 parseResponse :: ByteString -> String -> (String, [String])
 parseResponse response def =

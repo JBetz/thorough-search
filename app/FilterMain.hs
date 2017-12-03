@@ -24,11 +24,9 @@ main = do
   let scowlSize = read $ args !! 1
   let config = Config baseQuery connectionPool
   wordLists <- loadWordsFromScowl (fromInt scowlSize)
-  totalResults <- runReaderT selectResults config
-  print $ show (length totalResults) ++ " total results"
-  let extractedResults = fmap resultValue totalResults
-  let filteredResults =
-        fmap (filterResults baseQuery extractedResults extractedResults) wordLists
-  output <-
-    traverse (writeWordsToFile baseQuery) filteredResults
+  dbResults <- runReaderT selectResults config
+  print $ show (length dbResults) ++ " total results"
+  let results = fmap resultValue dbResults
+  let filteredResults = fmap (filterResults baseQuery results) wordLists
+  output <- traverse (writeWordsToFile baseQuery) filteredResults
   print $ show (length output) ++ " filtered results"

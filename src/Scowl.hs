@@ -33,15 +33,15 @@ toInt size = read $ drop 1 (show size)
 fromInt :: Int -> Size
 fromInt int = read $ "S" ++ show int
 
-filterResults :: String -> [String] -> [String] -> [String] -> [String]
-filterResults bq results totalResults scowlList = do
+filterResults :: String -> [String] -> [String] -> [String]
+filterResults bq results scowlList = do
   result <- results
   let rWords = words result
   let bqWords = words bq
   guard $
     (length rWords <= length bqWords + 1) &&
     (bq == head rWords) && null (tail rWords \\ scowlList) &&
-    (init result `notElem` totalResults)
+    (init result `notElem` results)
   pure result
 
 loadWordsFromScowl :: Size -> IO [[String]]

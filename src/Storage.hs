@@ -47,7 +47,7 @@ connStr :: Text
 connStr = "file:./output/autocomplete.db"
 
 insertResult :: (String, [String]) -> App [Maybe (Key Result)]
-insertResult result = do
+insertResult result = do 
   config <- ask
   let db = connectionPool config
   let bq = baseQuery config
