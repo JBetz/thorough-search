@@ -2,10 +2,16 @@
 
 module Scowl
   ( loadWordsFromScowl
+  , writeWordsToFile
+  , filterResults
+  , fromInt
   , Size(..)
   ) where
 
+import           Config
 import           Control.Monad
+import           Control.Monad.Reader
+import           Data.List            (isPrefixOf, sort, (\\))
 import           System.IO
 
 data Size
@@ -19,32 +25,38 @@ data Size
   | S70
   | S80
   | S95
-  deriving (Read, Enum)
+  deriving (Read, Enum, Show)
 
-show :: Size -> String
-show size =
-  Prelude.show $
-  case size of
-    S10 -> 10
-    S20 -> 20
-    S35 -> 35
-    S40 -> 40
-    S50 -> 50
-    S55 -> 55
-    S60 -> 60
-    S70 -> 70
-    S80 -> 80
-    S95 -> 95
+toInt :: Size -> Int
+toInt size = read $ drop 1 (show size)
 
-loadWordsFromScowl :: Size -> IO [String]
-loadWordsFromScowl size = do
-  words <-
-    traverse
-      (\s -> loadWordsFromFile ("./scowl/final/english-words." ++ Scowl.show s))
-      (enumFromTo S10 size)
-  pure $ join words
+fromInt :: Int -> Size
+fromInt int = read $ "S" ++ show int
 
-loadWordsFromFile :: FilePath -> IO [String]
-loadWordsFromFile path = do
-  fileContents <- readFile path
+filterResults :: [String] -> [String] -> App [String]
+filterResults results scowlList = do
+  config <- ask
+  let bq = baseQuery config
+  let filteredResults = do
+        result <- results
+        let rWords = words result
+        guard $
+          (length rWords <= (length . words) bq + 1) &&
+          (bq `isPrefixOf` head rWords) && null (tail rWords \\ scowlList)
+        pure result
+  pure filteredResults
+
+loadWordsFromScowl :: Size -> IO [[String]]
+loadWordsFromScowl size = traverse loadWordsFromFile (enumFromTo S10 size)
+
+loadWordsFromFile :: Size -> IO [String]
+loadWordsFromFile size = do
+  let fileName = "./scowl/final/english-words." ++ show (toInt size)
+  fileContents <- readFile fileName
   pure $ lines fileContents
+
+writeWordsToFile :: String -> [String] -> [IO ()]
+writeWordsToFile baseQuery ws = do
+  let fileName = "./output/" ++ baseQuery ++ show (length ws) ++ ".txt"
+  word <- sort ws
+  pure $ appendFile fileName (word ++ "\n")
