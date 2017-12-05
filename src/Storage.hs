@@ -1,66 +1,96 @@
-{-# LANGUAGE EmptyDataDecls             #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE QuasiQuotes                #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Storage
-  ( Result
-  , Query
+  ( ResultsField(..)
+  , createQueriesTable
+  , createResultsTable
   , connStr
-  , insertResult
+  , insertResultList
   , selectResults
-  , migrateAll
   , ranQuery
-  , resultValue
   ) where
 
 import           Config
 import           Control.Monad.Reader
-import           Data.Pool
-import           Data.Text               (Text)
-import           Database.Persist
-import           Database.Persist.Sql    (Key, SqlBackend, count, insertUnique,
-                                          runSqlPool, (==.))
-import           Database.Persist.Sqlite
-import           Database.Persist.TH
+import           Data.Text              (Text)
+import           Database.SQLite.Simple
 
-share
-  [mkPersist sqlSettings, mkMigrate "migrateAll"]
-  [persistLowerCase|
-Result
-    baseQuery String
-    value String
-    UniqueResult baseQuery value
-    deriving Show
-Query
-    value String
-    UniqueQuery value
-    deriving Show
-|]
+data QueriesField =
+  QueriesField Int
+               Text
+  deriving (Show)
 
-connStr :: Text
+data ResultsField =
+  ResultsField Int
+               Text
+               Text
+               Text
+  deriving (Show)
+
+instance FromRow ResultsField where
+  fromRow = ResultsField <$> field <*> field <*> field <*> field
+
+instance ToRow ResultsField where
+  toRow (ResultsField id bq eq value) = toRow (id, bq, eq, value)
+
+instance FromRow QueriesField where
+  fromRow = QueriesField <$> field <*> field
+
+connStr :: String
 connStr = "file:./output/autocomplete.db"
 
-insertResult :: (String, [String]) -> App [Maybe (Key Result)]
-insertResult result = do
-  (Config bq db) <- ask
-  runSqlPool (insertUnique (Query (fst result))) db
-  traverse (\r -> runSqlPool (insertUnique (Result bq r)) db) (snd result)
+createQueriesTable :: App (IO ())
+createQueriesTable = do
+  (Config bq conn) <- ask
+  pure $
+    execute
+      conn
+      "CREATE TABLE IF NOT EXISTS ? (id INTEGER PRIMARY KEY, value TEXT)"
+      [bq ++ "_queries"]
 
-selectResults :: App [Result]
+createResultsTable :: App (IO ())
+createResultsTable = do
+  (Config bq conn) <- ask
+  pure $
+    execute
+      conn
+      "CREATE TABLE IF NOT EXISTS ? (id INTEGER PRIMARY KEY, base_query TEXT, expanded_query TEXT, value TEXT)"
+      [bq ++ "_results"]
+
+insertResultList :: (String, [String]) -> App [()]
+insertResultList result = do
+  insertQuery (fst result)
+  traverse (insertResult (fst result)) (snd result)
+
+insertQuery :: String -> App (IO ())
+insertQuery query = do
+  (Config bq conn) <- ask
+  pure $
+    execute conn "INSERT INTO ? (value) VALUES (?)" (bq ++ "_queries", query)
+
+insertResult :: String -> String -> App ()
+insertResult expandedQuery result = do
+  (Config bq conn) <- ask
+  liftIO $
+    execute
+      conn
+      "INSERT INFO ? (base_query, expanded_query, value) VALUES (?, ?, ?)"
+      (bq, expandedQuery, result)
+
+selectResults :: App [ResultsField]
 selectResults = do
-  (Config bq db) <- ask
-  entityResults <- runSqlPool (selectList [ResultBaseQuery ==. bq] []) db
-  pure $ fmap entityVal entityResults
+  (Config bq conn) <- ask
+  liftIO $
+    query conn "SELECT * FROM ? WHERE base_query = ?" (bq ++ "_results", bq)
 
 ranQuery :: String -> App Bool
-ranQuery query = do
-  config <- ask
-  let db = connectionPool config
-  resultCount <- runSqlPool (count [QueryValue ==. query]) db
-  pure $ resultCount > 0
+ranQuery q = do
+  (Config bq conn) <- ask
+  liftIO $ do
+    res <-
+      query conn "SELECT * FROM ? WHERE value = ?" (bq ++ "_queries", q) :: IO [QueriesField]
+    pure $ not (null res)
