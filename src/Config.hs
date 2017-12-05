@@ -4,12 +4,11 @@ module Config
   ) where
 
 import           Control.Monad.Reader
-import           Data.Pool
-import           Database.Persist.Sql (SqlBackend)
+import           Database.SQLite.Simple
 
 type App = ReaderT Config IO
 
 data Config = Config
   { baseQuery      :: String
-  , connectionPool :: Pool SqlBackend
+  , connectionPool :: Connection
   }

@@ -14,11 +14,8 @@ import           Control.Monad.Reader
 import           Data.Aeson           (eitherDecode)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.List            (isSuffixOf, sort, union)
-import           Data.Pool
 import qualified Data.Set             as S
 import           Data.Text            (pack)
-import           Database.Persist.Sql (Key, SqlBackend, count, insertUnique,
-                                       runSqlPool, (==.))
 import           Network.HTTP.Client  (HttpException)
 import           Network.Wreq
 import           Storage
@@ -26,7 +23,7 @@ import           Storage
 alphabet :: String
 alphabet = "abcdefghijklmnopqrstuvwxyz"
 
-recursiveInstasearch :: String -> App [Maybe (Key Result)]
+recursiveInstasearch :: String -> App [()]
 recursiveInstasearch query = do
   liftIO $ print query
   config <- ask
@@ -36,7 +33,7 @@ recursiveInstasearch query = do
     else do
       results <- liftIO $ traverse instasearchWithRetry (expandQuery query)
       recResults <- traverse recursiveInstasearch (findExpandables results)
-      dbResults <- traverse insertResult results
+      dbResults <- traverse insertResultList results
       pure $ join dbResults `union` join recResults
 
 instasearchWithRetry :: String -> IO (String, [String])
@@ -62,7 +59,11 @@ expandQuery baseQuery =
 
 findExpandables :: [(String, [String])] -> [String]
 findExpandables results =
-  fmap fst (filter (\r -> length (snd r) == 10 && length ((last . words . fst) r) <= 4) results)
+  fmap
+    fst
+    (filter
+       (\r -> length (snd r) == 10 && length ((last . words . fst) r) <= 4)
+       results)
 
 parseResponse :: ByteString -> String -> (String, [String])
 parseResponse response def =
