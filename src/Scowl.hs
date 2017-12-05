@@ -8,10 +8,9 @@ module Scowl
   , Size(..)
   ) where
 
-import           Config
 import           Control.Monad
-import           Control.Monad.Reader
-import           Data.List            (isPrefixOf, sort, (\\))
+import           Data.List            (sort)
+import           Data.Set             as Set
 import           System.IO
 
 data Size
@@ -33,25 +32,26 @@ toInt size = read $ drop 1 (show size)
 fromInt :: Int -> Size
 fromInt int = read $ "S" ++ show int
 
-filterResults :: String -> [String] -> [String] -> [String]
+filterResults :: String -> Set String -> Set String -> [String]
 filterResults bq results scowlList = do
-  result <- results
+  result <- elems results
   let rWords = words result
   let bqWords = words bq
   guard $
     (length rWords <= length bqWords + 1) &&
-    (bq == head rWords) && null (tail rWords \\ scowlList) &&
+    (bq == head rWords) &&
+    Set.null (fromList (tail rWords) \\ scowlList) &&
     (init result `notElem` results)
   pure result
 
-loadWordsFromScowl :: Size -> IO [[String]]
+loadWordsFromScowl :: Size -> IO [Set String]
 loadWordsFromScowl size = traverse loadWordsFromFile (enumFromTo S10 size)
 
-loadWordsFromFile :: Size -> IO [String]
+loadWordsFromFile :: Size -> IO (Set String)
 loadWordsFromFile size = do
   let fileName = "./scowl/final/english-words." ++ show (toInt size)
   fileContents <- readFile fileName
-  pure $ lines fileContents
+  pure $ fromList $ lines fileContents
 
 writeWordsToFile :: String -> [String] -> IO [()]
 writeWordsToFile baseQuery ws =

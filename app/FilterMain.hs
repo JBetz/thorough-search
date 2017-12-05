@@ -4,6 +4,7 @@ module FilterMain where
 
 import           Config
 import           Control.Monad.Reader
+import           Data.Set               (fromList)
 import           Data.Text              (unpack)
 import           Database.SQLite.Simple (close, open)
 import           Scowl
@@ -21,7 +22,7 @@ main = do
   dbResults <- runReaderT selectResults config
   close connection
   print $ show (length dbResults) ++ " total results"
-  let results = fmap (\(ResultsField _ _ _ v) -> unpack v) dbResults
+  let results = fromList $ fmap (\(ResultsField _ _ _ v) -> unpack v) dbResults
   let filteredResults = fmap (filterResults query results) wordLists
   output <- traverse (writeWordsToFile query) filteredResults
   print $ show (length output) ++ " filtered results"

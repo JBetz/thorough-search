@@ -50,6 +50,7 @@ executable filter
   main-is:             FilterMain.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N -main-is FilterMain
   build-depends:       base
+                     , containers
                      , thorough-search
                      , monad-logger
                      , mtl
