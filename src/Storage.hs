@@ -70,10 +70,10 @@ insertResultList result = do
   _ <- insertQuery (fst result)
   traverse (insertResult (fst result)) (snd result)
 
-insertQuery :: String -> App (IO ())
+insertQuery :: String -> App ()
 insertQuery query = do
   (Config bq conn) <- ask
-  pure $
+  liftIO $
     execute
       conn
       (fromString $ "INSERT INTO " ++ bq ++ "_queries (value) VALUES (?)")
