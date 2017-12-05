@@ -15,8 +15,10 @@ main = do
   let query = head args
   connection <- open connStr
   let config = Config query connection
-  _ <- runReaderT createQueriesTable config
-  _ <- runReaderT createResultsTable config
-  result <- runReaderT (recursiveInstasearch $ query ++ " ") config
+  let actions = do
+        createQueriesTable
+        createResultsTable
+        recursiveInstasearch (query ++ " ")
+  result <- runReaderT actions config
   close connection
   print $ show (length result) ++ " results recorded"
