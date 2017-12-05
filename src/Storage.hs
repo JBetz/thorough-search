@@ -20,16 +20,10 @@ import           Data.String            (fromString)
 import           Data.Text              (Text)
 import           Database.SQLite.Simple
 
-data QueriesField =
-  QueriesField Int
-               Text
+data QueriesField = QueriesField Int Text
   deriving (Show)
 
-data ResultsField =
-  ResultsField Int
-               Text
-               Text
-               Text
+data ResultsField = ResultsField Int Text Text Text
   deriving (Show)
 
 instance FromRow ResultsField where
@@ -71,14 +65,14 @@ insertResultList result = do
   traverse (insertResult (fst result)) (snd result)
 
 insertQuery :: String -> App ()
-insertQuery query = do
+insertQuery queryString = do
   (Config bq conn) <- ask
   liftIO $
     execute
       conn
       (fromString $
        "INSERT OR IGNORE INTO " ++ bq ++ "_queries (value) VALUES (?)")
-      [query]
+      [queryString]
 
 insertResult :: String -> String -> App ()
 insertResult expandedQuery result = do
