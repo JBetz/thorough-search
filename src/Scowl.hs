@@ -9,8 +9,8 @@ module Scowl
   ) where
 
 import           Control.Monad
-import           Data.List            (sort)
-import           Data.Set             as Set
+import           Data.List     (sort)
+import           Data.Set      as Set
 import           System.IO
 
 data Size

@@ -51,7 +51,9 @@ createQueriesTable = do
   pure $
     execute_
       conn
-      (fromString $ "CREATE TABLE IF NOT EXISTS " ++ bq ++ "_queries (id INTEGER PRIMARY KEY, value TEXT)")
+      (fromString $
+       "CREATE TABLE IF NOT EXISTS " ++
+       bq ++ "_queries (id INTEGER PRIMARY KEY, value TEXT)")
 
 createResultsTable :: App (IO ())
 createResultsTable = do
@@ -59,7 +61,10 @@ createResultsTable = do
   pure $
     execute_
       conn
-      (fromString $ "CREATE TABLE IF NOT EXISTS " ++ bq ++ "_results (id INTEGER PRIMARY KEY, base_query TEXT, expanded_query TEXT, value TEXT)")
+      (fromString $
+       "CREATE TABLE IF NOT EXISTS " ++
+       bq ++
+       "_results (id INTEGER PRIMARY KEY, base_query TEXT, expanded_query TEXT, value TEXT)")
 
 insertResultList :: (String, [String]) -> App [()]
 insertResultList result = do
