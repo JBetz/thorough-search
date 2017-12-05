@@ -105,5 +105,5 @@ ranQuery q = do
   (Config bq conn) <- ask
   liftIO $ do
     res <-
-      query conn "SELECT * FROM ? WHERE value = ?" (bq ++ "_queries", q) :: IO [QueriesField]
+      query conn (fromString $ "SELECT * FROM " ++ bq ++ "_queries WHERE value = ?") [q] :: IO [QueriesField]
     pure $ not (null res)
