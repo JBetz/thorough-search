@@ -66,7 +66,7 @@ findExpandables results =
 parseResponse :: ByteString -> String -> (String, [String])
 parseResponse response def =
   case eitherDecode response :: Either String (String, [String]) of
-    Left _          -> (def, [])
+    Left _            -> (def, [])
     Right (key, vals) -> (key, vals)
 
 msThreadDelay :: Int -> IO ()

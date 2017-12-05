@@ -4,7 +4,7 @@ module SearchMain where
 
 import           Config
 import           Control.Monad.Reader
-import           Database.SQLite.Simple (open, close)
+import           Database.SQLite.Simple (close, open)
 import           Instasearch
 import           Storage
 import           System.Environment     (getArgs)

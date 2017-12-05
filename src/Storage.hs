@@ -16,8 +16,8 @@ module Storage
 
 import           Config
 import           Control.Monad.Reader
-import           Data.String                  (fromString)
-import           Data.Text                    (Text)
+import           Data.String            (fromString)
+import           Data.Text              (Text)
 import           Database.SQLite.Simple
 
 data QueriesField =
@@ -76,7 +76,8 @@ insertQuery query = do
   liftIO $
     execute
       conn
-      (fromString $ "INSERT OR IGNORE INTO " ++ bq ++ "_queries (value) VALUES (?)")
+      (fromString $
+       "INSERT OR IGNORE INTO " ++ bq ++ "_queries (value) VALUES (?)")
       [query]
 
 insertResult :: String -> String -> App ()
@@ -104,5 +105,8 @@ ranQuery q = do
   (Config bq conn) <- ask
   liftIO $ do
     res <-
-      query conn (fromString $ "SELECT * FROM " ++ bq ++ "_queries WHERE value = ?") [q] :: IO [QueriesField]
+      query
+        conn
+        (fromString $ "SELECT * FROM " ++ bq ++ "_queries WHERE value = ?")
+        [q] :: IO [QueriesField]
     pure $ not (null res)
