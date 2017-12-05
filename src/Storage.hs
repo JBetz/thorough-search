@@ -19,7 +19,6 @@ import           Control.Monad.Reader
 import           Data.String                  (fromString)
 import           Data.Text                    (Text)
 import           Database.SQLite.Simple
-import           Database.SQLite.Simple.Types
 
 data QueriesField =
   QueriesField Int
@@ -37,7 +36,7 @@ instance FromRow ResultsField where
   fromRow = ResultsField <$> field <*> field <*> field <*> field
 
 instance ToRow ResultsField where
-  toRow (ResultsField id bq eq value) = toRow (id, bq, eq, value)
+  toRow (ResultsField id_ bq eq value) = toRow (id_, bq, eq, value)
 
 instance FromRow QueriesField where
   fromRow = QueriesField <$> field <*> field
@@ -45,20 +44,20 @@ instance FromRow QueriesField where
 connStr :: String
 connStr = "file:./output/autocomplete.db"
 
-createQueriesTable :: App (IO ())
+createQueriesTable :: App ()
 createQueriesTable = do
   (Config bq conn) <- ask
-  pure $
+  liftIO $
     execute_
       conn
       (fromString $
        "CREATE TABLE IF NOT EXISTS " ++
        bq ++ "_queries (id INTEGER PRIMARY KEY, value TEXT)")
 
-createResultsTable :: App (IO ())
+createResultsTable :: App ()
 createResultsTable = do
   (Config bq conn) <- ask
-  pure $
+  liftIO $
     execute_
       conn
       (fromString $
@@ -68,7 +67,7 @@ createResultsTable = do
 
 insertResultList :: (String, [String]) -> App [()]
 insertResultList result = do
-  insertQuery (fst result)
+  _ <- insertQuery (fst result)
   traverse (insertResult (fst result)) (snd result)
 
 insertQuery :: String -> App (IO ())
