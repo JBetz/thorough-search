@@ -13,8 +13,7 @@ import           Control.Monad
 import           Control.Monad.Reader
 import           Data.Aeson           (eitherDecode)
 import           Data.ByteString.Lazy (ByteString)
-import           Data.List            (isSuffixOf, sort, union)
-import qualified Data.Set             as S
+import           Data.List            (isSuffixOf, union)
 import           Data.Text            (pack)
 import           Network.HTTP.Client  (HttpException)
 import           Network.Wreq
@@ -26,7 +25,6 @@ alphabet = "abcdefghijklmnopqrstuvwxyz"
 recursiveInstasearch :: String -> App [()]
 recursiveInstasearch query = do
   liftIO $ print query
-  config <- ask
   alreadyRan <- ranQuery query
   if alreadyRan
     then pure []
@@ -53,9 +51,9 @@ instasearch query = do
   pure $ parseResponse (response ^. responseBody) query
 
 expandQuery :: String -> [String]
-expandQuery baseQuery =
+expandQuery bq =
   let isValid q = not ("  " `isSuffixOf` q)
-  in filter isValid (fmap (snoc baseQuery) alphabet)
+  in filter isValid (fmap (snoc bq) alphabet)
 
 findExpandables :: [(String, [String])] -> [String]
 findExpandables results =
@@ -68,7 +66,7 @@ findExpandables results =
 parseResponse :: ByteString -> String -> (String, [String])
 parseResponse response def =
   case eitherDecode response :: Either String (String, [String]) of
-    Left err          -> (def, [])
+    Left _          -> (def, [])
     Right (key, vals) -> (key, vals)
 
 msThreadDelay :: Int -> IO ()
