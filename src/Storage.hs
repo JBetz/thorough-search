@@ -52,7 +52,7 @@ createQueriesTable = do
       conn
       (fromString $
        "CREATE TABLE IF NOT EXISTS " ++
-       bq ++ "_queries (id INTEGER PRIMARY KEY, value TEXT)")
+       bq ++ "_queries (id INTEGER PRIMARY KEY, value TEXT UNIQUE)")
 
 createResultsTable :: App ()
 createResultsTable = do
@@ -63,7 +63,7 @@ createResultsTable = do
       (fromString $
        "CREATE TABLE IF NOT EXISTS " ++
        bq ++
-       "_results (id INTEGER PRIMARY KEY, base_query TEXT, expanded_query TEXT, value TEXT)")
+       "_results (id INTEGER PRIMARY KEY, base_query TEXT, expanded_query TEXT, value TEXT UNIQUE)")
 
 insertResultList :: (String, [String]) -> App [()]
 insertResultList result = do
@@ -76,7 +76,7 @@ insertQuery query = do
   liftIO $
     execute
       conn
-      (fromString $ "INSERT INTO " ++ bq ++ "_queries (value) VALUES (?)")
+      (fromString $ "INSERT OR IGNORE INTO " ++ bq ++ "_queries (value) VALUES (?)")
       [query]
 
 insertResult :: String -> String -> App ()
@@ -86,7 +86,7 @@ insertResult expandedQuery result = do
     execute
       conn
       (fromString $
-       "INSERT INTO " ++
+       "INSERT OR IGNORE INTO " ++
        bq ++ "_results (base_query, expanded_query, value) VALUES (?, ?, ?)")
       (bq, expandedQuery, result)
 
