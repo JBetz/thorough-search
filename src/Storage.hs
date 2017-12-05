@@ -16,8 +16,10 @@ module Storage
 
 import           Config
 import           Control.Monad.Reader
-import           Data.Text              (Text)
+import           Data.String                  (fromString)
+import           Data.Text                    (Text)
 import           Database.SQLite.Simple
+import           Database.SQLite.Simple.Types
 
 data QueriesField =
   QueriesField Int
@@ -47,19 +49,17 @@ createQueriesTable :: App (IO ())
 createQueriesTable = do
   (Config bq conn) <- ask
   pure $
-    execute
+    execute_
       conn
-      "CREATE TABLE IF NOT EXISTS ? (id INTEGER PRIMARY KEY, value TEXT)"
-      [bq ++ "_queries"]
+      (fromString $ "CREATE TABLE IF NOT EXISTS " ++ bq ++ "_queries (id INTEGER PRIMARY KEY, value TEXT)")
 
 createResultsTable :: App (IO ())
 createResultsTable = do
   (Config bq conn) <- ask
   pure $
-    execute
+    execute_
       conn
-      "CREATE TABLE IF NOT EXISTS ? (id INTEGER PRIMARY KEY, base_query TEXT, expanded_query TEXT, value TEXT)"
-      [bq ++ "_results"]
+      (fromString $ "CREATE TABLE IF NOT EXISTS " ++ bq ++ "_results (id INTEGER PRIMARY KEY, base_query TEXT, expanded_query TEXT, value TEXT)")
 
 insertResultList :: (String, [String]) -> App [()]
 insertResultList result = do
@@ -70,7 +70,10 @@ insertQuery :: String -> App (IO ())
 insertQuery query = do
   (Config bq conn) <- ask
   pure $
-    execute conn "INSERT INTO ? (value) VALUES (?)" (bq ++ "_queries", query)
+    execute
+      conn
+      (fromString $ "INSERT INTO " ++ bq ++ "_queries (value) VALUES (?)")
+      [query]
 
 insertResult :: String -> String -> App ()
 insertResult expandedQuery result = do
@@ -78,14 +81,19 @@ insertResult expandedQuery result = do
   liftIO $
     execute
       conn
-      "INSERT INFO ? (base_query, expanded_query, value) VALUES (?, ?, ?)"
+      (fromString $
+       "INSERT INTO " ++
+       bq ++ "_results (base_query, expanded_query, value) VALUES (?, ?, ?)")
       (bq, expandedQuery, result)
 
 selectResults :: App [ResultsField]
 selectResults = do
   (Config bq conn) <- ask
   liftIO $
-    query conn "SELECT * FROM ? WHERE base_query = ?" (bq ++ "_results", bq)
+    query
+      conn
+      (fromString $ "SELECT * FROM " ++ bq ++ "_results WHERE base_query = ?")
+      [bq]
 
 ranQuery :: String -> App Bool
 ranQuery q = do
