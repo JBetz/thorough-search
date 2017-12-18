@@ -9,6 +9,6 @@ import           Database.SQLite.Simple
 type App = ReaderT Config IO
 
 data Config = Config
-  { baseQuery      :: String
-  , connectionPool :: Connection
+  { baseQuery  :: String
+  , connection :: Connection
   }
