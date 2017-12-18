@@ -40,7 +40,7 @@ instasearchWithRetry query =
     (instasearch query)
     (\e -> do
        print (e :: HttpException)
-       msThreadDelay 30000
+       msThreadDelay 300000
        instasearch query)
 
 instasearch :: String -> IO (String, [String])
