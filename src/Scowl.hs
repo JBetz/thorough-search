@@ -2,14 +2,17 @@
 
 module Scowl
   ( loadWordsFromScowl
-  , writeWordsToFile
   , filterResults
+  , writeFilteredWordsToFile
+  , writeExceptionalWordsToFile
+  , findExceptionalResults
   , fromInt
   , Size(..)
   ) where
 
 import           Control.Monad
 import           Data.List     (sort)
+import           Data.Map      (Map, elems, assocs)
 import           Data.Set      (Set, fromList, null, (\\))
 import           Prelude       hiding (null)
 
@@ -32,21 +35,29 @@ toInt size = read $ drop 1 (show size)
 fromInt :: Int -> Size
 fromInt int = read $ "S" ++ show int
 
-filterResults :: String -> [(String, String)] -> Set String -> [String]
+filterResults :: String -> Map String String -> Set String -> [String]
 filterResults bq results scowlList =
-  let resultValues = fmap snd results
+  let resultValues = elems results
       bqWords = words bq
   in do
-    currentResult <- results
-    let rWords = words (fst currentResult)
-    let exWords = words (snd currentResult)
+    currentResult <- assocs results
+    let rWords = words (snd currentResult)
     guard $
-      (length (exWords !! 1) <= 2) ||
-      ((length rWords <= length bqWords + 1) &&
+      (length rWords <= length bqWords + 1) &&
       (bq == head rWords) &&
       null (fromList (tail rWords) \\ scowlList) &&
-      (init (fst currentResult) `notElem` resultValues))
-    pure $ fst currentResult
+      (init (fst currentResult) `notElem` resultValues)
+    pure $ snd currentResult
+
+findExceptionalResults :: String -> Map String String -> [String] -> [String]
+findExceptionalResults bq allResults filteredResults =
+  snd <$> filter (\(query, value) ->
+    let rWords = words value
+    in (bq == head rWords) &&
+       length rWords == 2 &&
+       length (words query !! 1) <= 2 &&
+       value `notElem` filteredResults
+  ) (assocs allResults)
 
 loadWordsFromScowl :: Size -> IO [Set String]
 loadWordsFromScowl size = traverse loadWordsFromFile (enumFromTo S10 size)
@@ -57,9 +68,18 @@ loadWordsFromFile size = do
   fileContents <- readFile fileName
   pure $ fromList $ lines fileContents
 
-writeWordsToFile :: String -> Size -> [String] -> IO [()]
-writeWordsToFile baseQuery size ws =
+writeFilteredWordsToFile :: String -> Size -> [String] -> IO [()]
+writeFilteredWordsToFile baseQuery size ws =
+  let fileName = "./output/" ++ baseQuery ++ "_scowlSize=" ++ show size ++ "_count=" ++ show (length ws) ++ ".txt"
+  in writeWordsToFile fileName ws
+
+writeExceptionalWordsToFile :: String -> [String] -> IO [()]
+writeExceptionalWordsToFile baseQuery ws =
+  let fileName = "./output/" ++ baseQuery ++ "_exceptional_count=" ++ show (length ws) ++ ".txt"
+  in writeWordsToFile fileName ws
+
+writeWordsToFile :: String -> [String] -> IO [()]
+writeWordsToFile fileName ws =
   sequence $ do
-    let fileName = "./output/" ++ baseQuery ++ "_scowlSize=" ++ show size ++ "_resultCount=" ++ show (length ws) ++ ".txt"
     word <- sort ws
     pure $ appendFile fileName (word ++ "\n")
