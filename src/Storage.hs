@@ -10,14 +10,17 @@ module Storage
   , createResultsTable
   , connStr
   , insertResultList
-  , selectResults
+  , selectAllResults
+  , selectUniqueResults
   , ranQuery
   ) where
 
 import           Config
 import           Control.Monad.Reader
+import           Data.Map               (Map, fromList, assocs)
 import           Data.String            (fromString)
-import           Data.Text              (Text)
+import           Data.Text              (Text, unpack)
+import           Data.Tuple             (swap)
 import           Database.SQLite.Simple
 
 data QueriesField = QueriesField Int Text
@@ -60,9 +63,12 @@ createResultsTable = do
        "_results (id INTEGER PRIMARY KEY, base_query TEXT, expanded_query TEXT, value TEXT UNIQUE)")
 
 insertResultList :: (String, [String]) -> App [()]
-insertResultList result = do
-  _ <- insertQuery (fst result)
-  traverse (insertResult (fst result)) (snd result)
+insertResultList result =
+  if (not . null . snd) result
+    then do
+      _ <- insertQuery (fst result)
+      traverse (insertResult (fst result)) (snd result)
+    else pure []
 
 insertQuery :: String -> App ()
 insertQuery queryString = do
@@ -85,8 +91,14 @@ insertResult expandedQuery result = do
        bq ++ "_results (base_query, expanded_query, value) VALUES (?, ?, ?)")
       (bq, expandedQuery, result)
 
-selectResults :: App [ResultsField]
-selectResults = do
+selectUniqueResults :: App (Map String String)
+selectUniqueResults = do
+  totalResults <- selectAllResults
+  let resultAssocs = fmap (\(ResultsField _ _ eq v) -> (unpack v, unpack eq)) totalResults
+  pure $ fromList (swap <$> assocs (fromList resultAssocs))
+
+selectAllResults :: App [ResultsField]
+selectAllResults = do
   (Config bq conn) <- ask
   liftIO $
     query
