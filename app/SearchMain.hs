@@ -13,12 +13,12 @@ main :: IO ()
 main = do
   args <- getArgs
   let query = head args
-  connection <- open connStr
-  let config = Config query connection
+  conn <- open connStr
+  let config = Config query conn
   let actions = do
         createQueriesTable
         createResultsTable
-        recursiveInstasearch (query ++ " ")
+        recursiveInstasearch (query ++ " ") 1
   result <- runReaderT actions config
-  close connection
+  close conn
   print $ show (length result) ++ " results recorded"
