@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scowl
-  ( loadWordsFromScowl
+  ( loadWordSets
   , filterResults
   , writeFilteredWordsToFile
   , writeExceptionalWordsToFile
@@ -35,17 +35,22 @@ toInt size = read $ drop 1 (show size)
 fromInt :: Int -> Size
 fromInt int = read $ "S" ++ show int
 
-filterResults :: String -> Map String String -> Set String -> [String]
-filterResults bq results scowlList =
+filterResults :: String -> Map String String -> Size -> IO [[String]]
+filterResults bq results size = do
+  scowlSets <- loadWordSets size
+  pure $ fmap (filterResultsWith bq results) scowlSets
+
+filterResultsWith :: String -> Map String String -> Set String -> [String]
+filterResultsWith bq results scowlSet =
   let resultValues = elems results
       bqWords = words bq
   in do
     currentResult <- assocs results
-    let rWords = words (snd currentResult)
+    let rWords = words $ snd currentResult
     guard $
       (length rWords <= length bqWords + 1) &&
       (bq == head rWords) &&
-      null (fromList (tail rWords) \\ scowlList) &&
+      null (fromList (tail rWords) \\ scowlSet) &&
       (init (fst currentResult) `notElem` resultValues)
     pure $ snd currentResult
 
@@ -59,17 +64,22 @@ findExceptionalResults bq allResults filteredResults =
        value `notElem` filteredResults
   ) (assocs allResults)
 
-loadWordsFromScowl :: Size -> IO [Set String]
-loadWordsFromScowl size = traverse loadWordsFromFile (enumFromTo S10 size)
+loadWordSets :: Size -> IO [Set String]
+loadWordSets size = traverse loadWordSet (enumFromTo S10 size)
 
-loadWordsFromFile :: Size -> IO (Set String)
-loadWordsFromFile size = do
+loadWordSet :: Size -> IO (Set String)
+loadWordSet size = do
   let fileName = "./scowl/final/english-words." ++ show (toInt size)
   fileContents <- readFile fileName
-  pure $ fromList $ lines fileContents
+  pure $ fromList (lines fileContents)
 
-writeFilteredWordsToFile :: String -> Size -> [String] -> IO [()]
-writeFilteredWordsToFile baseQuery size ws =
+writeFilteredWordsToFile :: String -> [[String]] -> IO [[()]]
+writeFilteredWordsToFile baseQuery ws =
+  let wordPairs = zip (enumFrom S10) ws
+  in traverse (uncurry (writeFilteredWordSetToFile baseQuery)) wordPairs
+
+writeFilteredWordSetToFile :: String -> Size -> [String] -> IO [()]
+writeFilteredWordSetToFile baseQuery size ws =
   let fileName = "./output/" ++ baseQuery ++ "_scowlSize=" ++ show size ++ "_count=" ++ show (length ws) ++ ".txt"
   in writeWordsToFile fileName ws
 
