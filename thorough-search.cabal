@@ -23,6 +23,7 @@ library
                      , aeson
                      , bytestring
                      , containers
+                     , exceptions
                      , http-client
                      , mtl
                      , lens
