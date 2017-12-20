@@ -13,7 +13,7 @@ import           Control.Monad.Catch  (catch)
 import           Control.Monad.Reader
 import           Data.Aeson           (eitherDecode)
 import           Data.ByteString.Lazy (ByteString)
-import           Data.List            (isSuffixOf, union)
+import           Data.List            (union)
 import           Data.Text            (pack)
 import           Network.HTTP.Client  (HttpException)
 import           Network.Wreq
@@ -25,7 +25,7 @@ alphabet = "abcdefghijklmnopqrstuvwxyz"
 
 recursiveInstasearch :: String -> Int -> App [()]
 recursiveInstasearch query maxQueryLength = do
-  (Config bq conn) <- ask
+  (Config bq _) <- ask
   liftIO $ print $ "running with max query length " ++ show maxQueryLength
   currentResults <- recursiveInstasearchHelper query maxQueryLength
   allResults <- selectUniqueResults
