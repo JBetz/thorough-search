@@ -11,8 +11,8 @@ module Storage
   , connStr
   , insertResultList
   , selectAllResults
+  , selectAllResultPairs
   , selectQueryResults
-  , selectUniqueResults
   , ranQuery
   ) where
 
@@ -89,20 +89,18 @@ insertResult expandedQuery result = do
        bq ++ "_results (base_query, expanded_query, value) VALUES (?, ?, ?)")
       (bq, expandedQuery, result)
 
-selectUniqueResults :: App (Map String String)
-selectUniqueResults = do
+selectAllResultPairs :: App [(String, String)]
+selectAllResultPairs = do
   totalResults <- selectAllResults
-  let resultAssocs = fmap (\(ResultsField _ _ eq v) -> (unpack v, unpack eq)) totalResults
-  pure $ fromList (swap <$> assocs (fromList resultAssocs))
+  pure $ fmap (\(ResultsField _ _ eq v) -> (unpack eq, unpack v)) totalResults
 
 selectAllResults :: App [ResultsField]
 selectAllResults = do
   (Config bq conn) <- ask
   liftIO $
-    query
+    query_
       conn
-      (fromString $ "SELECT * FROM " ++ bq ++ "_results WHERE base_query = ?")
-      [bq]
+      (fromString $ "SELECT * FROM " ++ bq ++ "_results")
 
 ranQuery :: String -> App Bool
 ranQuery eq = do

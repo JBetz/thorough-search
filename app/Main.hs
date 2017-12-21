@@ -27,7 +27,7 @@ main = do
   searchResults <- runReaderT actions config
   print $ show searchResults ++ " search results recorded"
   -- get results from database
-  uniqueResults <- runReaderT selectUniqueResults config
+  uniqueResults <- runReaderT selectAllResultPairs config
   close conn
   print $ show (length uniqueResults) ++ " unique results"
   -- run scowl filter on results

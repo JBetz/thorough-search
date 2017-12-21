@@ -35,17 +35,17 @@ toInt size = read $ drop 1 (show size)
 fromInt :: Int -> Size
 fromInt int = read $ "S" ++ show int
 
-filterResults :: String -> Map String String -> Size -> IO [[String]]
+filterResults :: String -> [(String, String)]-> Size -> IO [[String]]
 filterResults bq results size = do
   scowlSets <- loadWordSets size
   pure $ fmap (filterResultsWith bq results) scowlSets
 
-filterResultsWith :: String -> Map String String -> Set String -> [String]
+filterResultsWith :: String -> [(String, String)] -> Set String -> [String]
 filterResultsWith bq results scowlSet =
-  let resultValues = elems results
-      bqWords = words bq
+  let bqWords = words bq
+      resultValues = fmap snd results
   in do
-    currentResult <- assocs results
+    currentResult <- results
     let rWords = words $ snd currentResult
     guard $
       (length rWords <= length bqWords + 1) &&
@@ -54,7 +54,7 @@ filterResultsWith bq results scowlSet =
       (init (fst currentResult) `notElem` resultValues)
     pure $ snd currentResult
 
-findExceptionalResults :: String -> Map String String -> [String] -> [String]
+findExceptionalResults :: String -> [(String, String)] -> [String] -> [String]
 findExceptionalResults bq allResults filteredResults =
   snd <$> filter (\(query, value) ->
     let rWords = words value
@@ -62,7 +62,7 @@ findExceptionalResults bq allResults filteredResults =
        length rWords == 2 &&
        length (words query !! 1) <= 2 &&
        value `notElem` filteredResults
-  ) (assocs allResults)
+  ) allResults
 
 loadWordSets :: Size -> IO [Set String]
 loadWordSets size = traverse loadWordSet (enumFromTo S10 size)
