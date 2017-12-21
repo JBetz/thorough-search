@@ -23,7 +23,7 @@ main = do
   let actions = do
         createQueriesTable
         createResultsTable
-        recursiveInstasearch (query ++ " ") 4
+        recursiveInstasearch (query ++ " ") 1
   searchResults <- runReaderT actions config
   print $ show searchResults ++ " search results recorded"
   -- get results from database
