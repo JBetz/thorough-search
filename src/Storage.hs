@@ -64,12 +64,9 @@ createResultsTable = do
        "_results (id INTEGER PRIMARY KEY, base_query TEXT, expanded_query TEXT, value TEXT UNIQUE)")
 
 insertResultList :: (String, [String]) -> App [()]
-insertResultList result =
-  if (not . null . snd) result
-    then do
-      _ <- insertQuery (fst result)
-      traverse (insertResult (fst result)) (snd result)
-    else pure []
+insertResultList result = do
+  _ <- insertQuery (fst result)
+  traverse (insertResult (fst result)) (snd result)
 
 insertQuery :: String -> App ()
 insertQuery queryString = do
