@@ -38,8 +38,9 @@ recursiveInstasearch' :: String -> Int -> App Int
 recursiveInstasearch' query maxQueryLength = do
   results <- traverse instasearchWithRetry (expandQuery query)
   let newQueries = findExpandables results maxQueryLength
+  let resultCount = sum $ fmap (length . snd) results
   recResults <- traverse (`recursiveInstasearch'` maxQueryLength) newQueries
-  pure $ length results + sum recResults
+  pure $ resultCount + sum recResults
 
 instasearchWithRetry :: String -> App (String, [String])
 instasearchWithRetry query =
@@ -56,7 +57,7 @@ instasearchWithCache query = do
   if alreadyRan
     then selectQueryResults query
     else do
-      results <- instasearchWithRetry query
+      results <- instasearch query
       _ <- insertResultList results
       pure results
 
