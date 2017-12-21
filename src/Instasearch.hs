@@ -52,7 +52,7 @@ instasearchWithRetry query =
     (instasearch query)
     (\e -> do
        liftIO $ print (e :: HttpException)
-       liftIO $ msThreadDelay 300000
+       liftIO $ secondsThreadDelay 300
        instasearch query)
 
 instasearch :: String -> App (String, [String])
@@ -86,5 +86,5 @@ parseResponse response def =
     Left _            -> (def, [])
     Right (key, vals) -> (key, vals)
 
-msThreadDelay :: Int -> IO ()
-msThreadDelay ms = threadDelay $ ms * 1000
+secondsThreadDelay :: Int -> IO ()
+secondsThreadDelay seconds = threadDelay $ seconds * 1000 * 1000
