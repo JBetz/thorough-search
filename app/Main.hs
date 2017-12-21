@@ -12,7 +12,7 @@ import           System.Environment     (getArgs)
 
 main :: IO ()
 main = do
-  -- parse command line arguments
+  -- read command line arguments
   args <- getArgs
   let query = head args
   let scowlSize = fromInt $ read (args !! 1)
@@ -23,7 +23,7 @@ main = do
   let actions = do
         createQueriesTable
         createResultsTable
-        recursiveInstasearch (query ++ " ") 3
+        recursiveInstasearch (query ++ " ") 4
   searchResults <- runReaderT actions config
   print $ show (length searchResults) ++ " search results recorded"
   -- get results from database
