@@ -76,7 +76,7 @@ findExpandables queries maxQueryLength =
   fmap fst
     (filter
        (\(query, results) ->
-        length (last (words query)) <= maxQueryLength && length results == 10
+        length (last (words query)) < maxQueryLength && length results == 10
        )
        queries)
 
