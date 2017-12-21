@@ -11,6 +11,7 @@ module Storage
   , connStr
   , insertResultList
   , selectAllResults
+  , selectQueryResults
   , selectUniqueResults
   , ranQuery
   ) where
@@ -107,12 +108,23 @@ selectAllResults = do
       [bq]
 
 ranQuery :: String -> App Bool
-ranQuery q = do
+ranQuery eq = do
   (Config bq conn) <- ask
   liftIO $ do
     res <-
       query
         conn
         (fromString $ "SELECT * FROM " ++ bq ++ "_queries WHERE value = ?")
-        [q] :: IO [QueriesField]
+        [eq] :: IO [QueriesField]
     pure $ not (null res)
+
+selectQueryResults :: String -> App (String, [String])
+selectQueryResults q = do
+  (Config bq conn) <- ask
+  liftIO $ do
+    res <-
+      query
+        conn
+        (fromString $ "SELECT * FROM " ++ bq ++ "_results WHERE expanded_query = ?")
+        [q] :: IO [ResultsField]
+    pure (q, fmap (\(ResultsField _ _ _ v) -> unpack v) res)
