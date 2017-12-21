@@ -45,11 +45,11 @@ recursiveInstasearch' query maxQueryLength = do
 instasearchWithRetry :: String -> App (String, [String])
 instasearchWithRetry query =
   catch
-    (instasearch query)
+    (instasearchWithCache query)
     (\e -> do
        liftIO $ print (e :: HttpException)
        liftIO $ secondsThreadDelay 300
-       instasearch query)
+       instasearchWithCache query)
 
 instasearchWithCache :: String -> App (String, [String])
 instasearchWithCache query = do
