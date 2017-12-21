@@ -24,17 +24,17 @@ main = do
         createQueriesTable
         createResultsTable
         recursiveInstasearch (query ++ " ") 3
-  result <- runReaderT actions config
-  print $ show (length result) ++ " results recorded"
+  searchResults <- runReaderT actions config
+  print $ show (length searchResults) ++ " search results recorded"
   -- get results from database
-  results <- runReaderT selectUniqueResults config
+  uniqueResults <- runReaderT selectUniqueResults config
   close conn
-  print $ show (length results) ++ " unique results"
+  print $ show (length uniqueResults) ++ " unique results"
   -- run scowl filter on results
-  filteredResults <- filterResults query results scowlSize
+  filteredResults <- filterResults query uniqueResults scowlSize
   _ <- writeFilteredWordsToFile query filteredResults
   print $ show ((length . join) filteredResults) ++ " filtered results"
   -- find highly relevant words that were excluded by scowl
-  let exceptionalResults = findExceptionalResults query results (join filteredResults)
+  let exceptionalResults = findExceptionalResults query uniqueResults (join filteredResults)
   _ <- writeExceptionalWordsToFile query exceptionalResults
   print $ show (length exceptionalResults) ++ " exceptional results"
