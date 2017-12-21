@@ -13,14 +13,13 @@ import           Control.Monad.Catch  (catch)
 import           Control.Monad.Reader
 import           Data.Aeson           (eitherDecode)
 import           Data.ByteString.Lazy (ByteString)
-import           Data.List            (union)
 import           Data.Text            (pack)
 import           Network.HTTP.Client  (HttpException)
 import           Network.Wreq
 import           Scowl
 import           Storage
 
-recursiveInstasearch :: String -> Int -> App [(String, [String])]
+recursiveInstasearch :: String -> Int -> App Int
 recursiveInstasearch query maxQueryLength = do
   (Config bq _) <- ask
   liftIO $ print $ "running with max query length " ++ show maxQueryLength
@@ -33,14 +32,14 @@ recursiveInstasearch query maxQueryLength = do
     then pure currentResults
     else do
       nextResults <- recursiveInstasearch query (maxQueryLength + 1)
-      pure $ currentResults ++ nextResults
+      pure $ currentResults + nextResults
 
-recursiveInstasearch' :: String -> Int -> App [(String, [String])]
+recursiveInstasearch' :: String -> Int -> App Int
 recursiveInstasearch' query maxQueryLength = do
   results <- traverse instasearchWithRetry (expandQuery query)
   let newQueries = findExpandables results maxQueryLength
   recResults <- traverse (`recursiveInstasearch'` maxQueryLength) newQueries
-  pure $ results `union` join recResults
+  pure $ length results + sum recResults
 
 instasearchWithRetry :: String -> App (String, [String])
 instasearchWithRetry query =

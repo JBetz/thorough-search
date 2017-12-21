@@ -25,7 +25,7 @@ main = do
         createResultsTable
         recursiveInstasearch (query ++ " ") 4
   searchResults <- runReaderT actions config
-  print $ show (length searchResults) ++ " search results recorded"
+  print $ show searchResults ++ " search results recorded"
   -- get results from database
   uniqueResults <- runReaderT selectUniqueResults config
   close conn
