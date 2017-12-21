@@ -16,8 +16,8 @@ main = do
   args <- getArgs
   let query = head args
   let scowlSize = fromInt $ read (args !! 1)
+  -- initialize configuration data
   conn <- open connStr
-  -- initialize configuration variables
   let config = Config query conn
   -- run search
   let actions = do
