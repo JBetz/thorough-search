@@ -20,9 +20,6 @@ import           Network.Wreq
 import           Scowl
 import           Storage
 
-alphabet :: String
-alphabet = "abcdefghijklmnopqrstuvwxyz"
-
 recursiveInstasearch :: String -> Int -> App [(String, [String])]
 recursiveInstasearch query maxQueryLength = do
   (Config bq _) <- ask
@@ -40,7 +37,6 @@ recursiveInstasearch query maxQueryLength = do
 
 recursiveInstasearch' :: String -> Int -> App [(String, [String])]
 recursiveInstasearch' query maxQueryLength = do
-  liftIO $ print query
   results <- traverse instasearchWithRetry (expandQuery query)
   let newQueries = findExpandables results maxQueryLength
   recResults <- traverse (`recursiveInstasearch'` maxQueryLength) newQueries
@@ -57,6 +53,7 @@ instasearchWithRetry query =
 
 instasearch :: String -> App (String, [String])
 instasearch query = do
+  liftIO $ print query
   alreadyRan <- ranQuery query
   if alreadyRan
     then selectQueryResults query
@@ -69,7 +66,7 @@ instasearch query = do
 
 expandQuery :: String -> [String]
 expandQuery bq =
-  fmap (snoc bq) alphabet
+  fmap (snoc bq) ['a'..'z']
 
 findExpandables :: [(String, [String])] -> Int -> [String]
 findExpandables queries maxQueryLength =
