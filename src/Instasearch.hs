@@ -64,7 +64,7 @@ instasearch query = do
       let opts = defaults & param "q" .~ [pack query] & param "client" .~ ["firefox"]
       response <- liftIO $ getWith opts "https://www.google.com/complete/search"
       let results = parseResponse (response ^. responseBody) query
-      dbResults <- insertResultList results
+      _ <- insertResultList results
       pure results
 
 expandQuery :: String -> [String]
