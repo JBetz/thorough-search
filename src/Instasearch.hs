@@ -51,18 +51,23 @@ instasearchWithRetry query =
        liftIO $ secondsThreadDelay 300
        instasearch query)
 
-instasearch :: String -> App (String, [String])
-instasearch query = do
+instasearchWithCache :: String -> App (String, [String])
+instasearchWithCache query = do
   alreadyRan <- ranQuery query
   if alreadyRan
     then selectQueryResults query
     else do
-      liftIO $ print query
-      let opts = defaults & param "q" .~ [pack query] & param "client" .~ ["firefox"]
-      response <- liftIO $ getWith opts "https://www.google.com/complete/search"
-      let results = parseResponse (response ^. responseBody) query
+      results <- instasearchWithRetry query
       _ <- insertResultList results
       pure results
+
+
+instasearch :: String -> App (String, [String])
+instasearch query = do
+  liftIO $ print query
+  let opts = defaults & param "q" .~ [pack query] & param "client" .~ ["firefox"]
+  response <- liftIO $ getWith opts "https://www.google.com/complete/search"
+  pure $ parseResponse (response ^. responseBody) query
 
 expandQuery :: String -> [String]
 expandQuery bq =
