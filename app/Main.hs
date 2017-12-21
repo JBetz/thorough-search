@@ -1,10 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module FilterMain where
+module Main where
 
 import           Config
 import           Control.Monad.Reader
 import           Database.SQLite.Simple (close, open)
+import           Instasearch
 import           Scowl
 import           Storage
 import           System.Environment     (getArgs)
@@ -15,13 +16,20 @@ main = do
   args <- getArgs
   let query = head args
   let scowlSize = fromInt $ read (args !! 1)
-  -- initialize configuration variables
   conn <- open connStr
+  -- initialize configuration variables
   let config = Config query conn
+  -- run search
+  let actions = do
+        createQueriesTable
+        createResultsTable
+        recursiveInstasearch (query ++ " ") 3
+  result <- runReaderT actions config
+  print $ show (length result) ++ " results recorded"
   -- get results from database
   results <- runReaderT selectUniqueResults config
   close conn
-  print $ show (length results) ++ " unique results" 
+  print $ show (length results) ++ " unique results"
   -- run scowl filter on results
   filteredResults <- filterResults query results scowlSize
   _ <- writeFilteredWordsToFile query filteredResults

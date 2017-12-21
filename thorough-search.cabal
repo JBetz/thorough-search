@@ -35,23 +35,9 @@ library
 
 executable search
   hs-source-dirs:      app
-  main-is:             SearchMain.hs
+  main-is:             Main.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N -main-is SearchMain
   build-depends:       base
-                     , thorough-search
-                     , monad-logger
-                     , mtl
-                     , sqlite-simple
-                     , text
-                     , utf8-string
-  default-language:    Haskell2010
-
-executable filter
-  hs-source-dirs:      app
-  main-is:             FilterMain.hs
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N -main-is FilterMain
-  build-depends:       base
-                     , containers
                      , thorough-search
                      , monad-logger
                      , mtl
