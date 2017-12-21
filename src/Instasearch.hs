@@ -53,11 +53,11 @@ instasearchWithRetry query =
 
 instasearch :: String -> App (String, [String])
 instasearch query = do
-  liftIO $ print query
   alreadyRan <- ranQuery query
   if alreadyRan
     then selectQueryResults query
     else do
+      liftIO $ print query
       let opts = defaults & param "q" .~ [pack query] & param "client" .~ ["firefox"]
       response <- liftIO $ getWith opts "https://www.google.com/complete/search"
       let results = parseResponse (response ^. responseBody) query
