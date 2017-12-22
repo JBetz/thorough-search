@@ -29,6 +29,9 @@ data Size
   | S95
   deriving (Read, Enum, Show)
 
+wordSetNames :: [String]
+wordSetNames = ["english-words", "american-words", "british-words"]
+
 toInt :: Size -> Int
 toInt size = read $ drop 1 (show size)
 
@@ -51,7 +54,7 @@ filterResultsWith bq results scowlSet =
       (length rWords <= length bqWords + 1) &&
       (bq == head rWords) &&
       null (fromList (tail rWords) \\ scowlSet) &&
-      (init (fst currentResult) `notElem` resultValues)
+      (init (snd currentResult) `notElem` resultValues)
     pure $ snd currentResult
 
 findExceptionalResults :: String -> [(String, String)] -> [String] -> [String]
@@ -69,9 +72,9 @@ loadWordSets size = traverse loadWordSet (enumFromTo S10 size)
 
 loadWordSet :: Size -> IO (Set String)
 loadWordSet size = do
-  let fileName = "./scowl/final/english-words." ++ show (toInt size)
-  fileContents <- readFile fileName
-  pure $ fromList (lines fileContents)
+  let fileNames = fmap (\name -> "./scowl/final/" ++ name ++ "." ++ show (toInt size)) wordSetNames
+  fileContents <- traverse readFile fileNames
+  pure $ fromList (join $ fmap lines fileContents)
 
 writeFilteredWordsToFile :: String -> [[String]] -> IO [[()]]
 writeFilteredWordsToFile baseQuery ws =
