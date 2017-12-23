@@ -18,10 +18,8 @@ module Storage
 
 import           Config
 import           Control.Monad.Reader
-import           Data.Map               (Map, fromList, assocs)
 import           Data.String            (fromString)
 import           Data.Text              (Text, unpack)
-import           Data.Tuple             (swap)
 import           Database.SQLite.Simple
 
 data QueriesField = QueriesField Int Text
