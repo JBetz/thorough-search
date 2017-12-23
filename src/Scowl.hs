@@ -3,17 +3,14 @@
 module Scowl
   ( loadWordSets
   , filterResults
-  , writeFilteredWordsToFile
-  , writeExceptionalWordsToFile
   , findExceptionalResults
   , fromInt
   , Size(..)
   ) where
 
 import Control.Monad
-import Data.Char (isAscii)
-import Data.List (sort)
 import Data.Set (Set, (\\), fromList, null)
+import Model
 import Prelude hiding (null)
 
 data Size
@@ -38,33 +35,33 @@ toInt size = read $ drop 1 (show size)
 fromInt :: Int -> Size
 fromInt int = read $ "S" ++ show int
 
-filterResults :: String -> [(String, String)] -> Size -> IO [[String]]
+filterResults :: Query -> [(String, String)] -> Size -> IO [[String]]
 filterResults bq results size = do
   scowlSets <- loadWordSets size
   pure $ fmap (filterResultsWith bq results) scowlSets
 
-filterResultsWith :: String -> [(String, String)] -> Set String -> [String]
+filterResultsWith :: Query -> [(String, String)] -> Set String -> [String]
 filterResultsWith bq results scowlSet =
-  let bqWords = words bq
+  let bqWords = words (show bq)
       resultValues = fmap snd results
   in do currentResult <- results
         let rWords = words $ snd currentResult
         guard $
           (length rWords <= length bqWords + 2) &&
-          (bq == head rWords) &&
+          (bq `matches` snd currentResult) &&
           null (fromList (tail rWords) \\ scowlSet) &&
           (init (snd currentResult) `notElem` resultValues)
         pure $ snd currentResult
 
-findExceptionalResults :: String -> [(String, String)] -> [String] -> [String]
+findExceptionalResults :: Query -> [(String, String)] -> [String] -> [String]
 findExceptionalResults bq allResults filteredResults =
   snd <$>
   filter
-    (\(query, value) ->
-       let rWords = words value
-       in (bq == head rWords) &&
+    (\(query, result) ->
+       let rWords = words result
+       in (bq `matches` result) &&
           length rWords == 2 &&
-          length (words query !! 1) <= 2 && value `notElem` filteredResults)
+          length (words query !! 1) <= 2 && result `notElem` filteredResults)
     allResults
 
 loadWordSets :: Size -> IO [Set String]
@@ -78,38 +75,3 @@ loadWordSet size = do
           wordSetNames
   fileContents <- traverse readFile fileNames
   pure $ fromList (join $ fmap lines fileContents)
-
-writeFilteredWordsToFile :: String -> [[String]] -> IO [[()]]
-writeFilteredWordsToFile baseQuery ws =
-  let wordPairs = zip (enumFrom S10) ws
-  in traverse (uncurry (writeFilteredWordSetToFile baseQuery)) wordPairs
-
-writeFilteredWordSetToFile :: String -> Size -> [String] -> IO [()]
-writeFilteredWordSetToFile baseQuery size ws =
-  let filePath =
-        outputFilePath
-          baseQuery
-          "scowl"
-          [("dictionarySize", show size), ("count", show (length ws))]
-  in writeWordsToFile filePath ws
-
-writeExceptionalWordsToFile :: String -> [String] -> IO [()]
-writeExceptionalWordsToFile baseQuery ws =
-  let filePath =
-        outputFilePath baseQuery "exceptional" [("count", show (length ws))]
-  in writeWordsToFile filePath ws
-
-writeWordsToFile :: String -> [String] -> IO [()]
-writeWordsToFile filePath ws =
-  sequence $ do
-    word <- sort ws
-    pure $ appendFile filePath (filter isAscii word ++ "\n")
-
-outputFilePath :: String -> String -> [(String, String)] -> String
-outputFilePath baseQuery kind metaData =
-  "./output/" ++
-  baseQuery ++
-  "/" ++
-  baseQuery ++
-  "-" ++
-  kind ++ (concatMap (\(k, v) -> "_" ++ k ++ "=" ++ v) metaData) ++ ".txt"

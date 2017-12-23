@@ -14,6 +14,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Config
                      , Instasearch
+                     , Model
                      , Storage
                      , Scowl
   build-depends:       base >= 4.7 && < 5
