@@ -83,16 +83,20 @@ writeFilteredWordsToFile baseQuery ws =
 
 writeFilteredWordSetToFile :: String -> Size -> [String] -> IO [()]
 writeFilteredWordSetToFile baseQuery size ws =
-  let fileName = "./output/" ++ baseQuery ++ "/" ++ baseQuery ++ "_scowlSize=" ++ show size ++ "_count=" ++ show (length ws) ++ ".txt"
-  in writeWordsToFile fileName ws
+  let filePath = outputFilePath baseQuery "scowl" [("dictionarySize", show size), ("count", show (length ws))]
+  in writeWordsToFile filePath ws
 
 writeExceptionalWordsToFile :: String -> [String] -> IO [()]
 writeExceptionalWordsToFile baseQuery ws =
-  let fileName = "./output/" ++ baseQuery ++ "/" ++ baseQuery ++ "_exceptional_count=" ++ show (length ws) ++ ".txt"
-  in writeWordsToFile fileName ws
+  let filePath = outputFilePath baseQuery "exceptional" [("count", show (length ws))]
+  in writeWordsToFile filePath ws
 
 writeWordsToFile :: String -> [String] -> IO [()]
-writeWordsToFile fileName ws =
+writeWordsToFile filePath ws =
   sequence $ do
     word <- sort ws
-    pure $ appendFile fileName (filter isAscii word ++ "\n")
+    pure $ appendFile filePath (filter isAscii word ++ "\n")
+
+outputFilePath :: String -> String -> [(String, String)] -> String 
+outputFilePath baseQuery kind metaData = 
+  "./output/" ++ baseQuery ++ "/" ++ baseQuery ++ "-" ++ kind ++ (concatMap (\(k, v) -> "_" ++ k ++ "=" ++ v) metaData) ++ ".txt"
