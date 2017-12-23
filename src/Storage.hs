@@ -63,7 +63,7 @@ createQueriesTable = do
       (fromString $
        "CREATE TABLE IF NOT EXISTS " ++
        show_ bq ++
-       "_queries (id INTEGER PRIMARY KEY, structure TEXT, base TEXT, expanded TEXT UNIQUE)")
+       "_queries (id INTEGER PRIMARY KEY, structure TEXT, base TEXT, expansion TEXT UNIQUE)")
 
 createResultsTable :: App ()
 createResultsTable = do
@@ -82,16 +82,15 @@ insertResultList result = do
   traverse (insertResult (fst result)) (snd result)
 
 insertQuery :: Query -> App ()
-insertQuery q = do
+insertQuery (Query b e s) = do
   (Config bq conn) <- ask
-  let (str, base, ex) = serialize q
   liftIO $
     execute
       conn
       (fromString $
        "INSERT OR IGNORE INTO " ++
-       show_ bq ++ "_queries (structure, base, expanded) VALUES (?, ?, ?)")
-      [str, base, ex]
+       show_ bq ++ "_queries (structure, base, expansion) VALUES (?, ?, ?)")
+      [show s, b, e]
 
 insertResult :: Query -> String -> App ()
 insertResult q result = do
@@ -115,15 +114,14 @@ selectAllResults = do
   liftIO $ query_ conn (fromString $ "SELECT * FROM " ++ show_ bq ++ "_results")
 
 ranQuery :: Query -> App Bool
-ranQuery q = do
+ranQuery (Query _ e _) = do
   (Config bq conn) <- ask
-  let (_, _, ex) = serialize q 
   liftIO $ do
     res <-
       SQL.query
         conn
-        (fromString $ "SELECT * FROM " ++ show_ bq ++ "_queries WHERE expanded = ?")
-        [ex] :: IO [QueriesField]
+        (fromString $ "SELECT * FROM " ++ show_ bq ++ "_queries WHERE expansion = ?")
+        [e] :: IO [QueriesField]
     pure $ not (null res)
 
 selectQueryResults :: Query -> App (Query, [String])

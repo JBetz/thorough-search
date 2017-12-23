@@ -1,6 +1,6 @@
 module Model
   ( Query(..)
-  , expansion
+  , Structure(..)
   , matches
   , readStr
   , serialize
@@ -10,62 +10,55 @@ module Model
 
 import Data.List
 
-data Query
-  = WordX String String
-  | WordOfX String String
-  | XWord String String
+data Query = Query
+  { base :: String 
+  , expansion :: String
+  , structure :: Structure
+  }
+
+data Structure = WordX | WordOfX | XWord
+  deriving (Show)
 
 instance Show Query where
-  show query =
-    case query of
-      WordX base ex -> base ++ " " ++ ex
-      WordOfX base ex -> base ++ " of " ++ ex
-      XWord base ex -> ex ++ " " ++ base
-
-expansion :: Query -> String
-expansion query = 
-  case query of 
-    WordX _ ex -> ex
-    WordOfX _ ex -> ex
-    XWord _ ex -> ex
+  show (Query b e s) =
+    case s of
+      WordX -> b ++ " " ++ e
+      WordOfX -> b ++ " of " ++ e
+      XWord -> e ++ " " ++ b
 
 matches :: Query -> String -> Bool
-matches query result = 
-  case query of 
-    WordX base _ -> (head . words) result == base
-    WordOfX base _ -> take 2 (words result) == words base
-    XWord base _ -> last (words result) == base 
- 
+matches (Query b _ s) result = 
+  case s of 
+    WordX -> (head . words) result == b
+    WordOfX -> take 2 (words result) == words b
+    XWord -> last (words result) == b
 
 readStr :: String -> Query
 readStr string = 
   let mIndex = elemIndex 'X' string
       strLength = length string
   in case mIndex of
-    Just 0 -> XWord (drop 2 string) "" 
+    Just 0 -> Query (drop 2 string) "" XWord 
     Just index -> 
         if index == strLength - 1 
-            then WordX (take (strLength - 2) string) ""
-            else WordOfX (take (strLength - 5) string) ""
+            then Query (take (strLength - 2) string) "" WordX
+            else Query (take (strLength - 5) string) "" WordOfX
     Nothing -> error "invalid query, needs to be of form '<word> X', '<word> of X', or 'X <word>'"
 
 serialize :: Query -> (String, String, String)
-serialize query =
-  case query of
-    WordX base ex -> ("WordX", base, ex)
-    WordOfX base ex -> ("WordOfX", base, ex)
-    XWord base ex -> ("XWord", base, ex)
+serialize (Query b e s) =
+    (b, e, show s)
 
 deserialize :: (String, String, String) -> Query
-deserialize (str, base, ex) =
-  case str of
-    "WordX" -> WordX base ex
-    "WordOfX" -> WordOfX base ex
-    "XWord" -> XWord base ex
+deserialize (b, e, s) =
+  case s of
+    "WordX" -> Query b e WordX
+    "WordOfX" -> Query b e WordOfX
+    "XWord" -> Query b e XWord
 
 show_ :: Query -> String
-show_ q = 
+show_ q@(Query _ _ s) = 
   let sanitized = fmap (\c -> if c == ' ' then '_' else c) (show q) 
-  in case q of 
-       XWord _ _ -> 'X' : sanitized
+  in case s of 
+       XWord -> 'X' : sanitized
        _ ->  sanitized ++ "X"

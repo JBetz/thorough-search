@@ -72,14 +72,9 @@ instasearch q = do
   pure $ parseResponse (response ^. responseBody) q
 
 expandQuery :: Query -> [Query]
-expandQuery q = fmap (expandWith q) ['a' .. 'z']
-
-expandWith :: Query -> Char -> Query
-expandWith q char = 
-  case q of 
-    WordX base ex -> WordX base (snoc ex char) 
-    WordOfX base ex -> WordOfX base (snoc ex char) 
-    XWord base ex -> XWord base (snoc ex char) 
+expandQuery (Query b e s)  = 
+  let expandWith char = Query b (e ++ [char]) s
+  in fmap expandWith ['a' .. 'z']
 
 findExpandables :: [(Query, [String])] -> Int -> [Query]
 findExpandables queries maxQueryLength =
