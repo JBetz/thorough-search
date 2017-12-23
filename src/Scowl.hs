@@ -11,8 +11,8 @@ module Scowl
   ) where
 
 import           Control.Monad
+import           Data.Char     (isAscii)
 import           Data.List     (sort)
-import           Data.Map      (Map, elems, assocs)
 import           Data.Set      (Set, fromList, null, (\\))
 import           Prelude       hiding (null)
 
@@ -51,7 +51,7 @@ filterResultsWith bq results scowlSet =
     currentResult <- results
     let rWords = words $ snd currentResult
     guard $
-      (length rWords <= length bqWords + 1) &&
+      (length rWords <= length bqWords + 2) &&
       (bq == head rWords) &&
       null (fromList (tail rWords) \\ scowlSet) &&
       (init (snd currentResult) `notElem` resultValues)
@@ -83,16 +83,16 @@ writeFilteredWordsToFile baseQuery ws =
 
 writeFilteredWordSetToFile :: String -> Size -> [String] -> IO [()]
 writeFilteredWordSetToFile baseQuery size ws =
-  let fileName = "./output/" ++ baseQuery ++ "_scowlSize=" ++ show size ++ "_count=" ++ show (length ws) ++ ".txt"
+  let fileName = "./output/" ++ baseQuery ++ "/" ++ baseQuery ++ "_scowlSize=" ++ show size ++ "_count=" ++ show (length ws) ++ ".txt"
   in writeWordsToFile fileName ws
 
 writeExceptionalWordsToFile :: String -> [String] -> IO [()]
 writeExceptionalWordsToFile baseQuery ws =
-  let fileName = "./output/" ++ baseQuery ++ "_exceptional_count=" ++ show (length ws) ++ ".txt"
+  let fileName = "./output/" ++ baseQuery ++ "/" ++ baseQuery ++ "_exceptional_count=" ++ show (length ws) ++ ".txt"
   in writeWordsToFile fileName ws
 
 writeWordsToFile :: String -> [String] -> IO [()]
 writeWordsToFile fileName ws =
   sequence $ do
     word <- sort ws
-    pure $ appendFile fileName (word ++ "\n")
+    pure $ appendFile fileName (filter isAscii word ++ "\n")
