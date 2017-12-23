@@ -3,8 +3,6 @@ module Model
   , Structure(..)
   , matches
   , readStr
-  , serialize
-  , deserialize
   , show_
   ) where
 
@@ -44,17 +42,6 @@ readStr string =
             then Query (take (strLength - 2) string) "" WordX
             else Query (take (strLength - 5) string) "" WordOfX
     Nothing -> error "invalid query, needs to be of form '<word> X', '<word> of X', or 'X <word>'"
-
-serialize :: Query -> (String, String, String)
-serialize (Query b e s) =
-    (b, e, show s)
-
-deserialize :: (String, String, String) -> Query
-deserialize (b, e, s) =
-  case s of
-    "WordX" -> Query b e WordX
-    "WordOfX" -> Query b e WordOfX
-    "XWord" -> Query b e XWord
 
 show_ :: Query -> String
 show_ q@(Query _ _ s) = 

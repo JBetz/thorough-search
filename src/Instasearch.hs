@@ -3,7 +3,6 @@
 module Instasearch
   ( instasearch
   , recursiveInstasearch
-  , serialize
   ) where
 
 import Config
@@ -93,5 +92,3 @@ parseResponse response q =
 
 secondsThreadDelay :: Int -> IO ()
 secondsThreadDelay seconds = threadDelay $ seconds * 1000 * 1000
-
-
