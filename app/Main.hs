@@ -16,15 +16,15 @@ main :: IO ()
 main = do
   args <- getArgs
   -- read command line arguments
-  let query = readStr $ head args
+  let baseQuery = readStr $ head args
   let scowlSize = fromInt $ read (args !! 1)
   conn <- open connStr
-  let config = Config query conn
+  let config = Config baseQuery conn
   -- run search
   let actions = do
         createQueriesTable
         createResultsTable
-        recursiveInstasearch query 1
+        recursiveInstasearch baseQuery 1
   searchResults <- runReaderT actions config
   print $ show searchResults ++ " search results recorded"
   -- get results from database
@@ -32,12 +32,12 @@ main = do
   close conn
   print $ show (length totalResults) ++ " total results"
   -- filter and record scowl results
-  _ <- createDirectoryIfMissing False ("./output/" ++ show_ query)
-  filteredResults <- filterResults query totalResults scowlSize
-  _ <- writeFilteredWordsToFile query filteredResults
+  _ <- createDirectoryIfMissing False ("./output/" ++ show_ baseQuery)
+  filteredResults <- filterResults baseQuery totalResults scowlSize
+  _ <- writeFilteredWordsToFile baseQuery filteredResults
   print $ show ((length . join) filteredResults) ++ " filtered results"
   -- find and record exceptional results
   let exceptionalResults =
-        findExceptionalResults query totalResults (join filteredResults)
-  _ <- writeExceptionalWordsToFile query exceptionalResults
+        findExceptionalResults baseQuery totalResults (join filteredResults)
+  _ <- writeExceptionalWordsToFile baseQuery exceptionalResults
   print $ show (length exceptionalResults) ++ " exceptional results"
