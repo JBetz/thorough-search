@@ -8,6 +8,7 @@ import           Database.SQLite.Simple (close, open)
 import           Instasearch
 import           Scowl
 import           Storage
+import           System.Directory       (createDirectoryIfMissing)
 import           System.Environment     (getArgs)
 
 main :: IO ()
@@ -27,14 +28,15 @@ main = do
   searchResults <- runReaderT actions config
   print $ show searchResults ++ " search results recorded"
   -- get results from database
-  uniqueResults <- runReaderT selectAllResultPairs config
+  totalResults <- runReaderT selectAllResultPairs config
   close conn
-  print $ show (length uniqueResults) ++ " unique results"
+  print $ show (length totalResults) ++ " total results"
   -- run scowl filter on results
-  filteredResults <- filterResults query uniqueResults scowlSize
+  _ <- createDirectoryIfMissing False ("./output/" ++ query)
+  filteredResults <- filterResults query totalResults scowlSize
   _ <- writeFilteredWordsToFile query filteredResults
   print $ show ((length . join) filteredResults) ++ " filtered results"
   -- find highly relevant words that were excluded by scowl
-  let exceptionalResults = findExceptionalResults query uniqueResults (join filteredResults)
+  let exceptionalResults = findExceptionalResults query totalResults (join filteredResults)
   _ <- writeExceptionalWordsToFile query exceptionalResults
   print $ show (length exceptionalResults) ++ " exceptional results"
