@@ -5,19 +5,19 @@ module Instasearch
   , recursiveInstasearch
   ) where
 
-import           Config
-import           Control.Concurrent
-import           Control.Lens
-import           Control.Monad
-import           Control.Monad.Catch  (catch)
-import           Control.Monad.Reader
-import           Data.Aeson           (eitherDecode)
-import           Data.ByteString.Lazy (ByteString)
-import           Data.Text            (pack)
-import           Network.HTTP.Client  (HttpException)
-import           Network.Wreq
-import           Scowl
-import           Storage
+import Config
+import Control.Concurrent
+import Control.Lens
+import Control.Monad
+import Control.Monad.Catch (catch)
+import Control.Monad.Reader
+import Data.Aeson (eitherDecode)
+import Data.ByteString.Lazy (ByteString)
+import Data.Text (pack)
+import Network.HTTP.Client (HttpException)
+import Network.Wreq
+import Scowl
+import Storage
 
 recursiveInstasearch :: String -> Int -> App Int
 recursiveInstasearch query maxQueryLength = do
@@ -61,31 +61,30 @@ instasearchWithCache query = do
       _ <- insertResultList results
       pure results
 
-
 instasearch :: String -> App (String, [String])
 instasearch query = do
   liftIO $ print query
-  let opts = defaults & param "q" .~ [pack query] & param "client" .~ ["firefox"]
+  let opts =
+        defaults & param "q" .~ [pack query] & param "client" .~ ["firefox"]
   response <- liftIO $ getWith opts "https://www.google.com/complete/search"
   pure $ parseResponse (response ^. responseBody) query
 
 expandQuery :: String -> [String]
-expandQuery bq =
-  fmap (snoc bq) ['a'..'z']
+expandQuery bq = fmap (snoc bq) ['a' .. 'z']
 
 findExpandables :: [(String, [String])] -> Int -> [String]
 findExpandables queries maxQueryLength =
-  fmap fst
+  fmap
+    fst
     (filter
        (\(query, results) ->
-        length (last (words query)) < maxQueryLength && length results == 10
-       )
+          length (last (words query)) < maxQueryLength && length results == 10)
        queries)
 
 parseResponse :: ByteString -> String -> (String, [String])
 parseResponse response def =
   case eitherDecode response :: Either String (String, [String]) of
-    Left _            -> (def, [])
+    Left _ -> (def, [])
     Right (key, vals) -> (key, vals)
 
 secondsThreadDelay :: Int -> IO ()

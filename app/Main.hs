@@ -2,19 +2,20 @@
 
 module Main where
 
-import           Config
-import           Control.Monad.Reader
-import           Database.SQLite.Simple (close, open)
-import           Instasearch
-import           Scowl
-import           Storage
-import           System.Directory       (createDirectoryIfMissing)
-import           System.Environment     (getArgs)
+import Config
+import Control.Monad.Reader
+import Database.SQLite.Simple (close, open)
+import Instasearch
+import Scowl
+import Storage
+import System.Directory (createDirectoryIfMissing)
+import System.Environment (getArgs)
 
 main :: IO ()
-main = do
-  -- read command line arguments
+main
+ = do
   args <- getArgs
+  -- read command line arguments
   let query = head args
   let scowlSize = fromInt $ read (args !! 1)
   -- initialize configuration data
@@ -37,6 +38,7 @@ main = do
   _ <- writeFilteredWordsToFile query filteredResults
   print $ show ((length . join) filteredResults) ++ " filtered results"
   -- find highly relevant words that were excluded by scowl
-  let exceptionalResults = findExceptionalResults query totalResults (join filteredResults)
+  let exceptionalResults =
+        findExceptionalResults query totalResults (join filteredResults)
   _ <- writeExceptionalWordsToFile query exceptionalResults
   print $ show (length exceptionalResults) ++ " exceptional results"

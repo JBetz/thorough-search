@@ -1,8 +1,8 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Storage
   ( ResultsField(..)
@@ -16,16 +16,22 @@ module Storage
   , ranQuery
   ) where
 
-import           Config
-import           Control.Monad.Reader
-import           Data.String            (fromString)
-import           Data.Text              (Text, unpack)
-import           Database.SQLite.Simple
+import Config
+import Control.Monad.Reader
+import Data.String (fromString)
+import Data.Text (Text, unpack)
+import Database.SQLite.Simple
 
-data QueriesField = QueriesField Int Text
+data QueriesField =
+  QueriesField Int
+               Text
   deriving (Show)
 
-data ResultsField = ResultsField Int Text Text Text
+data ResultsField =
+  ResultsField Int
+               Text
+               Text
+               Text
   deriving (Show)
 
 instance FromRow ResultsField where
@@ -95,10 +101,7 @@ selectAllResultPairs = do
 selectAllResults :: App [ResultsField]
 selectAllResults = do
   (Config bq conn) <- ask
-  liftIO $
-    query_
-      conn
-      (fromString $ "SELECT * FROM " ++ bq ++ "_results")
+  liftIO $ query_ conn (fromString $ "SELECT * FROM " ++ bq ++ "_results")
 
 ranQuery :: String -> App Bool
 ranQuery eq = do
@@ -118,6 +121,7 @@ selectQueryResults q = do
     res <-
       query
         conn
-        (fromString $ "SELECT * FROM " ++ bq ++ "_results WHERE expanded_query = ?")
+        (fromString $
+         "SELECT * FROM " ++ bq ++ "_results WHERE expanded_query = ?")
         [q] :: IO [ResultsField]
     pure (q, fmap (\(ResultsField _ _ _ v) -> unpack v) res)

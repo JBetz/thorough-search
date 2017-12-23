@@ -3,12 +3,12 @@ module Config
   , Config(..)
   ) where
 
-import           Control.Monad.Reader
-import           Database.SQLite.Simple
+import Control.Monad.Reader
+import Database.SQLite.Simple
 
 type App = ReaderT Config IO
 
 data Config = Config
-  { baseQuery  :: String
+  { baseQuery :: String
   , connection :: Connection
   }
