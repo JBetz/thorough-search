@@ -41,9 +41,9 @@ filterResults bq results size = do
   pure $ fmap (filterResultsWith bq results) scowlSets
 
 filterResultsWith :: Query -> [String] -> Set String -> [String]
-filterResultsWith bq results scowlSet =
+filterResultsWith bq@(Query _ _ s) results scowlSet =
   do result <- results
-     let resultDiff = difference bq result
+     let resultDiff = extractExpansion s result
      guard $
        (length resultDiff <= 1) &&
        (bq `matches` result) &&

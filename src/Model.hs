@@ -2,7 +2,7 @@ module Model
   ( Query(..)
   , Structure(..)
   , matches
-  , difference
+  , extractExpansion
   , readStr
   , show_
   ) where
@@ -57,8 +57,8 @@ matches (Query b _ s) result =
       WordOfX -> take 2 rWords == words b
       XWord -> last rWords == b
 
-difference :: Query -> String -> [String]
-difference (Query _ _ s) result = 
+extractExpansion :: Structure -> String -> [String]
+extractExpansion s result = 
   let rWords = words result
   in case s of 
       WordX -> drop 1 rWords
