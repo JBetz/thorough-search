@@ -44,14 +44,13 @@ filterResultsWith :: Query -> [(String, String)] -> Set String -> [String]
 filterResultsWith bq results scowlSet =
   let bqWords = words (show bq)
       resultValues = fmap snd results
-  in do currentResult <- results
-        let rWords = words $ snd currentResult
+  in do result <- resultValues
         guard $
-          (length rWords <= length bqWords + 2) &&
-          (bq `matches` snd currentResult) &&
-          null (fromList (tail rWords) \\ scowlSet) &&
-          (init (snd currentResult) `notElem` resultValues)
-        pure $ snd currentResult
+          ((length . words) result <= length bqWords + 2) &&
+          (bq `matches` result) &&
+          null ((fromList . tail . words) result \\ scowlSet) &&
+          (init result `notElem` resultValues)
+        pure result
 
 findExceptionalResults :: Query -> [(String, String)] -> [String] -> [String]
 findExceptionalResults bq allResults filteredResults =
@@ -61,7 +60,9 @@ findExceptionalResults bq allResults filteredResults =
        let rWords = words result
        in (bq `matches` result) &&
           length rWords == 2 &&
-          length (words query !! 1) <= 2 && result `notElem` filteredResults)
+          length query <= 2 && 
+          result `notElem` filteredResults
+    )
     allResults
 
 loadWordSets :: Size -> IO [Set String]
