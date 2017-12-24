@@ -35,21 +35,20 @@ toInt size = read $ drop 1 (show size)
 fromInt :: Int -> Size
 fromInt int = read $ "S" ++ show int
 
-filterResults :: Query -> [(String, String)] -> Size -> IO [[String]]
+filterResults :: Query -> [String] -> Size -> IO [[String]]
 filterResults bq results size = do
   scowlSets <- loadWordSets size
   pure $ fmap (filterResultsWith bq results) scowlSets
 
-filterResultsWith :: Query -> [(String, String)] -> Set String -> [String]
+filterResultsWith :: Query -> [String] -> Set String -> [String]
 filterResultsWith bq results scowlSet =
   let bqWords = words (show bq)
-      resultValues = fmap snd results
-  in do result <- resultValues
+  in do result <- results
         guard $
-          ((length . words) result <= length bqWords + 2) &&
+          ((length . words) result <= length bqWords + 1) &&
           (bq `matches` result) &&
-          null ((fromList . tail . words) result \\ scowlSet) &&
-          (init result `notElem` resultValues)
+          null (fromList (difference bq result) \\ scowlSet) &&
+          (init result `notElem` results)
         pure result
 
 findExceptionalResults :: Query -> [(String, String)] -> [String] -> [String]
