@@ -26,7 +26,7 @@ recursiveInstasearch q maxQueryLength = do
   liftIO $ print $ "running with max query length " ++ show maxQueryLength
   currentResults <- recursiveInstasearch' q maxQueryLength
   allResults <- selectAllResultPairs
-  filteredResults <- liftIO $ filterResults bq allResults S35
+  filteredResults <- liftIO $ filterResults bq (fmap snd allResults) S35
   let filteredResultCount = (length . join) filteredResults
   liftIO $ print $ show filteredResultCount ++ " filtered results"
   if filteredResultCount > 1000

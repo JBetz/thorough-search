@@ -28,16 +28,17 @@ main = do
   searchResults <- runReaderT actions config
   print $ show searchResults ++ " search results recorded"
   -- get results from database
-  totalResults <- runReaderT selectAllResultPairs config
+  resultPairs <- runReaderT selectAllResultPairs config
+  let results = fmap snd resultPairs
   close conn
-  print $ show (length totalResults) ++ " total results"
+  print $ show (length results) ++ " total results"
   -- filter and record scowl results
   _ <- createDirectoryIfMissing False ("./output/" ++ show_ baseQuery)
-  filteredResults <- filterResults baseQuery totalResults scowlSize
+  filteredResults <- filterResults baseQuery results scowlSize
   _ <- writeFilteredWordsToFile baseQuery filteredResults
   print $ show ((length . join) filteredResults) ++ " filtered results"
   -- find and record exceptional results
   let exceptionalResults =
-        findExceptionalResults baseQuery totalResults (join filteredResults)
+        findExceptionalResults baseQuery resultPairs (join filteredResults)
   _ <- writeExceptionalWordsToFile baseQuery exceptionalResults
   print $ show (length exceptionalResults) ++ " exceptional results"
