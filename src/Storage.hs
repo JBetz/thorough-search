@@ -25,7 +25,7 @@ import Data.List (sort)
 import Data.String (fromString)
 import Data.Text (Text, unpack)
 import Database.SQLite.Simple as SQL hiding (Query)
-import Model
+import Model hiding (fromString)
 import Scowl
 
 -- DATABASE
