@@ -35,10 +35,11 @@ main = do
   -- filter and record scowl results
   _ <- createDirectoryIfMissing False ("./output/" ++ show_ baseQuery)
   filteredResults <- filterResults baseQuery results scowlSize
-  _ <- writeFilteredWordsToFile baseQuery filteredResults
   print $ show ((length . join) filteredResults) ++ " filtered results"
+  _ <- writeFilteredWordsToFile baseQuery filteredResults
   -- find and record exceptional results
   let exceptionalResults =
         findExceptionalResults baseQuery resultPairs (join filteredResults)
-  _ <- writeExceptionalWordsToFile baseQuery exceptionalResults
   print $ show (length exceptionalResults) ++ " exceptional results"
+  _ <- writeExceptionalWordsToFile baseQuery exceptionalResults
+  pure ()
