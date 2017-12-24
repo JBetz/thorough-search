@@ -16,7 +16,7 @@ main :: IO ()
 main = do
   args <- getArgs
   -- read command line arguments
-  let baseQuery = readStr $ head args
+  let baseQuery = fromString $ head args
   conn <- open connStr
   let config = Config baseQuery conn
   -- run search

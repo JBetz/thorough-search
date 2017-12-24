@@ -3,7 +3,7 @@ module Model
   , Structure(..)
   , matches
   , extractExpansion
-  , readStr
+  , fromString
   , show_
   ) where
 
@@ -36,8 +36,8 @@ show_ q@(Query _ _ s) =
       _ ->  sanitized ++ "X"
 
 -- PARSING
-readStr :: String -> Query
-readStr string = 
+fromString :: String -> Query
+fromString string = 
   let mIndex = elemIndex 'X' string
       strLength = length string
       errorMessage = "invalid query, needs to be of form '<word> X', '<word> of X', or 'X <word>'"
