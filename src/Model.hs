@@ -62,4 +62,4 @@ difference (Query _ _ s) result =
   in case s of 
       WordX -> drop 1 rWords
       WordOfX -> drop 2 rWords
-      XWord -> take (length rWords - 2) rWords
+      XWord -> init rWords
