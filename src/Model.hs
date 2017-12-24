@@ -51,10 +51,11 @@ readStr string =
 -- TESTING
 matches :: Query -> String -> Bool
 matches (Query b _ s) result = 
-  case s of 
-    WordX -> (head . words) result == b
-    WordOfX -> take 2 (words result) == words b
-    XWord -> last (words result) == b
+  let rWords = words result
+  in case s of 
+      WordX -> head rWords == b
+      WordOfX -> take 2 rWords == words b
+      XWord -> last rWords == b
 
 difference :: Query -> String -> [String]
 difference (Query _ _ s) result = 
