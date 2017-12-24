@@ -42,14 +42,13 @@ filterResults bq results size = do
 
 filterResultsWith :: Query -> [String] -> Set String -> [String]
 filterResultsWith bq results scowlSet =
-  let bqWords = words (show bq)
-  in do result <- results
-        guard $
-          ((length . words) result <= length bqWords + 1) &&
-          (bq `matches` result) &&
-          null (fromList (difference bq result) \\ scowlSet) &&
-          (init result `notElem` results)
-        pure result
+  do result <- results
+     let resultDiff = difference bq result
+     guard $
+       (length resultDiff <= 1) &&
+       (bq `matches` result) &&
+       null (fromList resultDiff \\ scowlSet)
+     pure result
 
 findExceptionalResults :: Query -> [(String, String)] -> [String] -> [String]
 findExceptionalResults bq allResults filteredResults =
