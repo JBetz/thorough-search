@@ -17,7 +17,6 @@ main = do
   args <- getArgs
   -- read command line arguments
   let baseQuery = readStr $ head args
-  let scowlSize = fromInt $ read (args !! 1)
   conn <- open connStr
   let config = Config baseQuery conn
   -- run search
@@ -34,7 +33,7 @@ main = do
   print $ show (length results) ++ " total results"
   -- filter and record scowl results
   _ <- createDirectoryIfMissing False ("./output/" ++ show_ baseQuery)
-  filteredResults <- filterResults baseQuery results scowlSize
+  filteredResults <- filterResults baseQuery results
   print $ show ((length . join) filteredResults) ++ " filtered results"
   _ <- writeFilteredWordsToFile baseQuery filteredResults
   -- find and record exceptional results

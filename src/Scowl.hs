@@ -35,9 +35,9 @@ toInt size = read $ drop 1 (show size)
 fromInt :: Int -> Size
 fromInt int = read $ "S" ++ show int
 
-filterResults :: Query -> [String] -> Size -> IO [[String]]
-filterResults bq results size = do
-  scowlSets <- loadWordSets size
+filterResults :: Query -> [String] -> IO [[String]]
+filterResults bq results = do
+  scowlSets <- loadWordSets
   pure $ fmap (filterResultsWith bq results) scowlSets
 
 filterResultsWith :: Query -> [String] -> Set String -> [String]
@@ -63,8 +63,8 @@ findExceptionalResults bq allResults filteredResults =
     )
     allResults
 
-loadWordSets :: Size -> IO [Set String]
-loadWordSets size = traverse loadWordSet (enumFromTo S10 size)
+loadWordSets :: IO [Set String]
+loadWordSets = traverse loadWordSet (enumFromTo S10 S95)
 
 loadWordSet :: Size -> IO (Set String)
 loadWordSet size = do
