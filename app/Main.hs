@@ -5,9 +5,9 @@ module Main where
 import Config
 import Control.Monad.Reader
 import Database.SQLite.Simple (close, open)
+import Filter
 import Instasearch
 import Model
-import Scowl
 import Storage
 import System.Directory (createDirectoryIfMissing)
 import System.Environment (getArgs)

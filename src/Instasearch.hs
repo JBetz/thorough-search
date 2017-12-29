@@ -13,10 +13,10 @@ import Control.Monad.Reader
 import Data.Aeson (eitherDecode)
 import Data.ByteString.Lazy (ByteString)
 import Data.Text (pack)
+import Filter
 import Model
 import Network.HTTP.Client (HttpException)
 import Network.Wreq
-import Scowl
 import Storage
 
 recursiveInstasearch :: Query -> Int -> App Int
