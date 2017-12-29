@@ -141,20 +141,19 @@ writeFilteredWordsToFile q frs =
   traverse (writeFilteredResultSetToFile q) frs
 
 writeFilteredResultSetToFile :: Query -> FilteredResultSet -> IO [()]
-writeFilteredResultSetToFile q (FilteredResultSet size wLength ws) =
+writeFilteredResultSetToFile q (FilteredResultSet rl ss ws) =
   let filePath =
         outputFilePath
           q
-          "scowl"
-          [ ("resultLength", show wLength) 
-          , ("dictionarySize", show size)
+          [ ("resultLength", show rl) 
+          , ("scowlSize", show ss)
           , ("count", show (length ws))
           ]
   in writeWordsToFile filePath ws
 
 writeExceptionalWordsToFile :: Query -> [String] -> IO [()]
 writeExceptionalWordsToFile q ws =
-  let filePath = outputFilePath q "exceptional" [("count", show (length ws))]
+  let filePath = outputFilePath q [("exceptionalCount", show (length ws))]
   in writeWordsToFile filePath ws
 
 writeWordsToFile :: String -> [String] -> IO [()]
@@ -163,11 +162,11 @@ writeWordsToFile filePath ws =
     word <- sort ws
     pure $ appendFile filePath (filter isAscii word ++ "\n")
 
-outputFilePath :: Query -> String -> [(String, String)] -> String
-outputFilePath q kind metaData =
+outputFilePath :: Query -> [(String, String)] -> String
+outputFilePath q metaData =
   "./output/" ++
   show_ q ++
   "/" ++
   show_ q ++
   "-" ++
-  kind ++ (concatMap (\(k, v) -> "_" ++ k ++ "=" ++ v) metaData) ++ ".txt"
+  (concatMap (\(k, v) -> "_" ++ k ++ "=" ++ v) metaData) ++ ".txt"
