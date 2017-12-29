@@ -25,8 +25,8 @@ import Data.List (sort)
 import Data.String (fromString)
 import Data.Text (Text, unpack)
 import Database.SQLite.Simple as SQL hiding (Query)
+import Filter
 import Model hiding (fromString)
-import Scowl
 
 -- DATABASE
 data QueriesField =
@@ -146,8 +146,8 @@ writeFilteredResultSetToFile q (FilteredResultSet size wLength ws) =
         outputFilePath
           q
           "scowl"
-          [ ("dictionarySize", show size)
-          , ("resultLength", show wLength) 
+          [ ("resultLength", show wLength) 
+          , ("dictionarySize", show size)
           , ("count", show (length ws))
           ]
   in writeWordsToFile filePath ws

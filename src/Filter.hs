@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Scowl
+module Filter
   ( filterResults
   , findExceptionalResults
   , fromInt
