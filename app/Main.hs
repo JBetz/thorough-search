@@ -33,7 +33,7 @@ main = do
   print $ show (length results) ++ " total results"
   -- filter and record scowl results
   _ <- createDirectoryIfMissing False ("./output/" ++ show_ baseQuery)
-  filteredResults <- filterResults baseQuery results 1
+  filteredResults <- filterResults baseQuery 5 results
   print $ show (length $ fmap _results filteredResults) ++ " filtered results"
   _ <- writeFilteredWordsToFile baseQuery filteredResults
   -- find and record exceptional results
