@@ -19,11 +19,12 @@ data FilteredResultSet = FilteredResultSet
   , _results :: [String] 
   }
 
-filterResults :: Query -> [String] -> Int -> IO [FilteredResultSet]
-filterResults bq results maxLength = do
+filterResults :: Query -> Int -> [String] -> IO [FilteredResultSet]
+filterResults bq maxLength results = do
   wordLists <- loadWordLists
+  let matchingResults = filter (matches bq) results
   let accWordLists = accumulatedWordLists wordLists
-  pure $ filterResultsByLength bq maxLength (results, []) accWordLists
+  pure $ filterResultsByLength bq maxLength (matchingResults, []) accWordLists
 
 filterResultsByLength :: Query -> Int -> ([String], [FilteredResultSet]) -> [WordList] -> [FilteredResultSet]
 filterResultsByLength bq maxLength rs@(unsorted, sorted) wordLists = 
@@ -45,13 +46,12 @@ filterResultsByScowlSet bq resultLength rs@(unsorted, sorted) scowlSets =
     in filterResultsByScowlSet bq resultLength (unsorted \\ _results curSorted, newSorted) xs 
 
 runFilter :: Query -> Int -> ([String], [FilteredResultSet]) -> WordList -> FilteredResultSet
-runFilter bq@(Query _ _ s) resultLength (unsorted, sorted) wordList = 
+runFilter (Query _ _ s) resultLength (unsorted, sorted) wordList = 
   let filteredResults = do
         result <- unsorted
         let resultDiff = extractExpansion s result
         guard $
           (length resultDiff == resultLength) &&
-          (bq `matches` result) &&
           null (resultDiff \\ _words wordList) &&
           (result `notElem` concatMap _results sorted)
         pure result
