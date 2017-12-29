@@ -8,7 +8,6 @@ module Instasearch
 import Config
 import Control.Concurrent
 import Control.Lens
-import Control.Monad
 import Control.Monad.Catch (catch)
 import Control.Monad.Reader
 import Data.Aeson (eitherDecode)
@@ -26,8 +25,8 @@ recursiveInstasearch q maxQueryLength = do
   liftIO $ print $ "running with max query length " ++ show maxQueryLength
   currentResults <- recursiveInstasearch' q maxQueryLength
   allResults <- selectAllResultPairs
-  filteredResults <- liftIO $ filterResults bq (fmap snd allResults)
-  let filteredResultCount = (length . join) filteredResults
+  filteredResults <- liftIO $ filterResults bq (fmap snd allResults) 1
+  let filteredResultCount = length $ concatMap _results filteredResults
   liftIO $ print $ show filteredResultCount ++ " filtered results"
   if filteredResultCount > 1000
     then pure currentResults
@@ -58,16 +57,15 @@ instasearchWithCache q = do
   if alreadyRan
     then selectQueryResults q
     else do
-      results <- instasearch q
+      liftIO $ print q
+      results <- liftIO $ instasearch q
       _ <- insertResultList results
       pure results
 
-instasearch :: Query -> App (Query, [String])
+instasearch :: Query -> IO (Query, [String])
 instasearch q = do
-  liftIO $ print q
-  let opts =
-        defaults & param "q" .~ [pack (show q)] & param "client" .~ ["firefox"]
-  response <- liftIO $ getWith opts "https://www.google.com/complete/search"
+  let opts = defaults & param "q" .~ [pack $ show q] & param "client" .~ ["firefox"]
+  response <- getWith opts "https://www.google.com/complete/search"
   pure $ parseResponse (response ^. responseBody) q
 
 expandQuery :: Query -> [Query]

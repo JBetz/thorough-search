@@ -33,12 +33,12 @@ main = do
   print $ show (length results) ++ " total results"
   -- filter and record scowl results
   _ <- createDirectoryIfMissing False ("./output/" ++ show_ baseQuery)
-  filteredResults <- filterResults baseQuery results
-  print $ show ((length . join) filteredResults) ++ " filtered results"
+  filteredResults <- filterResults baseQuery results 1
+  print $ show (length $ fmap _results filteredResults) ++ " filtered results"
   _ <- writeFilteredWordsToFile baseQuery filteredResults
   -- find and record exceptional results
   let exceptionalResults =
-        findExceptionalResults baseQuery resultPairs (join filteredResults)
+        findExceptionalResults baseQuery resultPairs filteredResults
   print $ show (length exceptionalResults) ++ " exceptional results"
   _ <- writeExceptionalWordsToFile baseQuery exceptionalResults
   pure ()

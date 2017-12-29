@@ -52,7 +52,7 @@ instance FromRow QueriesField where
   fromRow = QueriesField <$> field <*> field <*> field <*> field
 
 connStr :: String
-connStr = "file:./output/autocomplete.db"
+connStr = "file:./output/database.db"
 
 createQueriesTable :: App ()
 createQueriesTable = do
@@ -136,18 +136,20 @@ selectQueryResults q = do
     pure (q, fmap (\(ResultsField _ _ v) -> unpack v) res)
 
 -- FILE 
-writeFilteredWordsToFile :: Query -> [[String]] -> IO [[()]]
-writeFilteredWordsToFile baseQuery ws =
-  let wordPairs = zip (enumFrom S10) ws
-  in traverse (uncurry (writeFilteredWordSetToFile baseQuery)) wordPairs
+writeFilteredWordsToFile :: Query -> [FilteredResultSet] -> IO [[()]]
+writeFilteredWordsToFile q frs =
+  traverse (writeFilteredResultSetToFile q) frs
 
-writeFilteredWordSetToFile :: Query -> Size -> [String] -> IO [()]
-writeFilteredWordSetToFile q size ws =
+writeFilteredResultSetToFile :: Query -> FilteredResultSet -> IO [()]
+writeFilteredResultSetToFile q (FilteredResultSet size wLength ws) =
   let filePath =
         outputFilePath
           q
           "scowl"
-          [("dictionarySize", show size), ("count", show (length ws))]
+          [ ("dictionarySize", show size)
+          , ("resultLength", show wLength) 
+          , ("count", show (length ws))
+          ]
   in writeWordsToFile filePath ws
 
 writeExceptionalWordsToFile :: Query -> [String] -> IO [()]
