@@ -24,14 +24,14 @@ recursiveInstasearch :: Query -> Int -> App Int
 recursiveInstasearch q maxQueryLength = do
   (Config bq _) <- ask
   -- get previous count
-  prevAllResults <- selectAllResultPairs
+  prevAllResults <- selectUniqueResults
   prevFilteredResults <- liftIO $ filterResults bq 4 (fmap snd prevAllResults)
   let prevFilteredResultCount = length $ concatMap _results prevFilteredResults
   -- run with next max query length
   liftIO $ printInfo $ "running with max query length " ++ show maxQueryLength
   curResults <- recursiveInstasearch' q maxQueryLength
   -- get current count
-  curAllResults <- selectAllResultPairs
+  curAllResults <- selectUniqueResults
   curFilteredResults <- liftIO $ filterResults bq 4 (fmap snd curAllResults)
   let curFilteredResultCount = length $ concatMap _results curFilteredResults
   liftIO $ printStats $ show curFilteredResultCount ++ " filtered results"

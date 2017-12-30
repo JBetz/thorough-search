@@ -27,7 +27,7 @@ main = do
   printEvent "[END] Search"
   -- get results from database
   printEvent "[START] Filter" 
-  resultPairs <- runReaderT selectAllResultPairs config
+  resultPairs <- runReaderT selectUniqueResults config
   let results = fmap snd resultPairs
   close conn
   printStats $ show (length results) ++ " total results"

@@ -11,7 +11,7 @@ module Storage
   , connStr
   , insertResultList
   , selectAllResults
-  , selectAllResultPairs
+  , selectUniqueResults
   , selectQueryResults
   , ranQuery
   , writeFilteredWordsToFile
@@ -107,8 +107,8 @@ insertResult q result = do
        show_ bq ++ "_results (query, result) VALUES (?, ?)")
       [show q, result]
 
-selectAllResultPairs :: App [(String, String)]
-selectAllResultPairs = do
+selectUniqueResults :: App [(String, String)]
+selectUniqueResults = do
   totalResults <- selectAllResults
   let resultPairs = fmap (\(ResultsField _ eq v) -> (unpack eq, unpack v)) totalResults
   let resultMap = fromList $ fmap swap resultPairs
