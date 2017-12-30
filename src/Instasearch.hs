@@ -35,7 +35,7 @@ recursiveInstasearch q maxQueryLength = do
   curFilteredResults <- liftIO $ filterResults bq 4 (fmap snd curAllResults)
   let curFilteredResultCount = length $ concatMap _results curFilteredResults
   liftIO $ printStats $ show curFilteredResultCount ++ " filtered results"
-  -- recursive if there's more to find
+  -- recurse if there's more to find
   if curFilteredResultCount > 1500 || curFilteredResultCount == prevFilteredResultCount
     then pure curResults
     else do
