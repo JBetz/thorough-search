@@ -23,24 +23,20 @@ import Storage
 recursiveInstasearch :: Query -> Int -> App Int
 recursiveInstasearch q maxQueryLength = do
   (Config bq _) <- ask
-  -- get previous count
-  prevAllResults <- selectUniqueResults
-  prevFilteredResults <- liftIO $ filterResults bq 4 (fmap snd prevAllResults)
-  let prevFilteredResultCount = length $ concatMap _results prevFilteredResults
   -- run with next max query length
   liftIO $ printInfo $ "running with max query length " ++ show maxQueryLength
-  curResults <- recursiveInstasearch' q maxQueryLength
+  curResultCount <- recursiveInstasearch' q maxQueryLength
   -- get current count
-  curAllResults <- selectUniqueResults
-  curFilteredResults <- liftIO $ filterResults bq 4 (fmap snd curAllResults)
+  curResults <- selectUniqueResults
+  curFilteredResults <- liftIO $ filterResults bq 4 (fmap snd curResults)
   let curFilteredResultCount = length $ concatMap _results curFilteredResults
   liftIO $ printStats $ show curFilteredResultCount ++ " filtered results"
   -- recurse if there's more to find
-  if curFilteredResultCount > 1500 || curFilteredResultCount == prevFilteredResultCount
-    then pure curResults
+  if curResultCount == 0 || curFilteredResultCount > 3000
+    then pure curResultCount
     else do
-      nextResults <- recursiveInstasearch q (maxQueryLength + 1)
-      pure $ curResults + nextResults
+      nextResultCount <- recursiveInstasearch q (maxQueryLength + 1)
+      pure $ curResultCount + nextResultCount
 
 recursiveInstasearch' :: Query -> Int -> App Int
 recursiveInstasearch' q maxQueryLength = do
@@ -74,7 +70,7 @@ instasearch :: Query -> IO [String]
 instasearch q = do
   let opts = defaults & param "q" .~ [pack $ show q] & param "client" .~ ["firefox"]
   response <- getWith opts "https://www.google.com/complete/search"
-  pure $ parseResponse (response ^. responseBody) q
+  pure $ parseResponse (response ^. responseBody)
 
 expandQuery :: Query -> [Query]
 expandQuery (Query b e s)  = 
@@ -91,8 +87,8 @@ findExpandables queries maxQueryLength =
           length (expansion q) < maxQueryLength && length results == 10)
        queries)
 
-parseResponse :: ByteString -> Query -> [String]
-parseResponse response q =
+parseResponse :: ByteString -> [String]
+parseResponse response =
   case eitherDecode response :: Either String (String, [String]) of
     Left _ -> []
     Right (_, vals) -> vals
