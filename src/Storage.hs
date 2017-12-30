@@ -22,8 +22,10 @@ import Config
 import Control.Monad.Reader
 import Data.Char (isAscii)
 import Data.List (sort)
+import Data.Map (assocs, fromList)
 import Data.String (fromString)
 import Data.Text (Text, unpack)
+import Data.Tuple (swap)
 import Database.SQLite.Simple as SQL hiding (Query)
 import Filter
 import Model hiding (fromString)
@@ -76,7 +78,7 @@ createResultsTable = do
       (fromString $
        "CREATE TABLE IF NOT EXISTS " ++
        show_ bq ++
-       "_results (id INTEGER PRIMARY KEY, query TEXT, result TEXT UNIQUE)")
+       "_results (id INTEGER PRIMARY KEY, query TEXT, result TEXT)")
 
 insertResultList :: (Query, [String]) -> App [()]
 insertResultList result = do
@@ -108,7 +110,9 @@ insertResult q result = do
 selectAllResultPairs :: App [(String, String)]
 selectAllResultPairs = do
   totalResults <- selectAllResults
-  pure $ fmap (\(ResultsField _ eq v) -> (unpack eq, unpack v)) totalResults
+  let resultPairs = fmap (\(ResultsField _ eq v) -> (unpack eq, unpack v)) totalResults
+  let resultMap = fromList $ fmap swap resultPairs
+  pure $ fmap swap (assocs resultMap)
 
 selectAllResults :: App [ResultsField]
 selectAllResults = do
