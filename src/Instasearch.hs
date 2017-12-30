@@ -67,10 +67,10 @@ instasearchWithCache q = do
     else do
       liftIO $ print $ show q
       results <- liftIO $ instasearch q
-      _ <- insertResultList results
-      pure results
+      _ <- insertResultList (q, results)
+      pure (q, results)
 
-instasearch :: Query -> IO (Query, [String])
+instasearch :: Query -> IO [String]
 instasearch q = do
   let opts = defaults & param "q" .~ [pack $ show q] & param "client" .~ ["firefox"]
   response <- getWith opts "https://www.google.com/complete/search"
@@ -91,11 +91,11 @@ findExpandables queries maxQueryLength =
           length (expansion q) < maxQueryLength && length results == 10)
        queries)
 
-parseResponse :: ByteString -> Query -> (Query, [String])
+parseResponse :: ByteString -> Query -> [String]
 parseResponse response q =
   case eitherDecode response :: Either String (String, [String]) of
-    Left _ -> (q, [])
-    Right (_, vals) -> (q, vals)
+    Left _ -> []
+    Right (_, vals) -> vals
 
 secondsThreadDelay :: Int -> IO ()
 secondsThreadDelay seconds = threadDelay $ seconds * 1000 * 1000
