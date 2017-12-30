@@ -34,7 +34,7 @@ main = do
   -- filter and record scowl results
   _ <- createDirectoryIfMissing False ("./output/" ++ show_ baseQuery)
   filteredResults <- filterResults baseQuery 4 results
-  print $ show (length $ fmap _results filteredResults) ++ " filtered results"
+  print $ show (length $ concatMap _results filteredResults) ++ " filtered results"
   _ <- writeFilteredWordsToFile baseQuery filteredResults
   -- find and record exceptional results
   let exceptionalResults =
