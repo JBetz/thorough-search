@@ -27,6 +27,8 @@ import Data.Text (Text, unpack)
 import Database.SQLite.Simple as SQL hiding (Query)
 import Filter
 import Model hiding (fromString)
+import System.Directory (createDirectoryIfMissing)
+
 
 -- DATABASE
 data QueriesField =
@@ -137,7 +139,8 @@ selectQueryResults q = do
 
 -- FILE 
 writeFilteredWordsToFile :: Query -> [FilteredResultSet] -> IO [[()]]
-writeFilteredWordsToFile q frs =
+writeFilteredWordsToFile q frs = do
+  _ <- createDirectoryIfMissing False ("./output/" ++ show_ q)
   traverse (writeFilteredResultSetToFile q) frs
 
 writeFilteredResultSetToFile :: Query -> FilteredResultSet -> IO [()]
@@ -145,16 +148,20 @@ writeFilteredResultSetToFile q (FilteredResultSet rl ss ws) =
   let filePath =
         outputFilePath
           q
-          [ ("resultLength", show rl) 
-          , ("scowlSize", show ss)
+          ("length=" ++ show rl)
+          [ ("scowlSize", show ss)
           , ("count", show (length ws))
           ]
-  in writeWordsToFile filePath ws
+  in do 
+    _ <- createDirectoryIfMissing False ("./output/" ++ show_ q ++ "/length=" ++ show rl)
+    writeWordsToFile filePath ws
 
 writeExceptionalWordsToFile :: Query -> [String] -> IO [()]
 writeExceptionalWordsToFile q ws =
-  let filePath = outputFilePath q [("exceptionalCount", show (length ws))]
-  in writeWordsToFile filePath ws
+  let filePath = outputFilePath q "exceptional" [("count", show (length ws))]
+  in do 
+    _ <- createDirectoryIfMissing False ("./output/" ++ show_ q ++ "/exceptional")
+    writeWordsToFile filePath ws
 
 writeWordsToFile :: String -> [String] -> IO [()]
 writeWordsToFile filePath ws =
@@ -162,11 +169,13 @@ writeWordsToFile filePath ws =
     word <- sort ws
     pure $ appendFile filePath (filter isAscii word ++ "\n")
 
-outputFilePath :: Query -> [(String, String)] -> String
-outputFilePath q metaData =
+outputFilePath :: Query -> String -> [(String, String)] -> String
+outputFilePath q subDir metaData =
   "./output/" ++
   show_ q ++
+  "/" ++ 
+  subDir ++
   "/" ++
   show_ q ++
   "-" ++
-  (concatMap (\(k, v) -> "_" ++ k ++ "=" ++ v) metaData) ++ ".txt"
+  tail (concatMap (\(k, v) -> "_" ++ k ++ "=" ++ v) metaData) ++ ".txt"
