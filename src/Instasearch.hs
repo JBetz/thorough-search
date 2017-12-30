@@ -12,6 +12,7 @@ import Control.Monad.Catch (catch)
 import Control.Monad.Reader
 import Data.Aeson (eitherDecode)
 import Data.ByteString.Lazy (ByteString)
+import Data.List (isSuffixOf)
 import Data.Text (pack)
 import Filter
 import Model
@@ -22,17 +23,24 @@ import Storage
 recursiveInstasearch :: Query -> Int -> App Int
 recursiveInstasearch q maxQueryLength = do
   (Config bq _) <- ask
-  liftIO $ print $ "running with max query length " ++ show maxQueryLength
-  currentResults <- recursiveInstasearch' q maxQueryLength
-  allResults <- selectAllResultPairs
-  filteredResults <- liftIO $ filterResults bq 4 (fmap snd allResults)
-  let filteredResultCount = length $ concatMap _results filteredResults
-  liftIO $ print $ show filteredResultCount ++ " filtered results"
-  if filteredResultCount > 1000
-    then pure currentResults
+  -- get previous count
+  prevAllResults <- selectAllResultPairs
+  prevFilteredResults <- liftIO $ filterResults bq 4 (fmap snd prevAllResults)
+  let prevFilteredResultCount = length $ concatMap _results prevFilteredResults
+  -- run with next max query length
+  liftIO $ printInfo $ "running with max query length " ++ show maxQueryLength
+  curResults <- recursiveInstasearch' q maxQueryLength
+  -- get current count
+  curAllResults <- selectAllResultPairs
+  curFilteredResults <- liftIO $ filterResults bq 4 (fmap snd curAllResults)
+  let curFilteredResultCount = length $ concatMap _results curFilteredResults
+  liftIO $ printStats $ show curFilteredResultCount ++ " filtered results"
+  -- recursive if there's more to find
+  if curFilteredResultCount > 1500 || curFilteredResultCount == prevFilteredResultCount
+    then pure curResults
     else do
       nextResults <- recursiveInstasearch q (maxQueryLength + 1)
-      pure $ currentResults + nextResults
+      pure $ curResults + nextResults
 
 recursiveInstasearch' :: Query -> Int -> App Int
 recursiveInstasearch' q maxQueryLength = do
@@ -47,7 +55,7 @@ instasearchWithRetry q =
   catch
     (instasearchWithCache q)
     (\e -> do
-       liftIO $ print (e :: HttpException)
+       liftIO $ putStrLn $ show (e :: HttpException)
        liftIO $ secondsThreadDelay 300
        instasearchWithCache q)
 
@@ -57,7 +65,7 @@ instasearchWithCache q = do
   if alreadyRan
     then selectQueryResults q
     else do
-      liftIO $ print q
+      liftIO $ print $ show q
       results <- liftIO $ instasearch q
       _ <- insertResultList results
       pure results
@@ -71,7 +79,8 @@ instasearch q = do
 expandQuery :: Query -> [Query]
 expandQuery (Query b e s)  = 
   let expandWith char = Query b (e ++ [char]) s
-  in fmap expandWith ['a' .. 'z']
+      invalid (Query _ e' _) = "  " `isSuffixOf` e' || head e' == ' '
+  in filter (not . invalid) (fmap expandWith (' ' : ['a' .. 'z']))
 
 findExpandables :: [(Query, [String])] -> Int -> [Query]
 findExpandables queries maxQueryLength =
