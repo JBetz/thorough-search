@@ -27,9 +27,12 @@ library
                      , mtl
                      , lens
                      , lens-aeson
+                     , path
+                     , path-io
                      , sqlite-simple
                      , text
                      , wreq
+                     , zip
   default-language:    Haskell2010
 
 executable search

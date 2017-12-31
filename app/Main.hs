@@ -39,4 +39,5 @@ main = do
   let exceptionalResults = findExceptionalResults baseQuery resultPairs filteredResults
   printStats $ show (length exceptionalResults) ++ " exceptional results"
   _ <- writeExceptionalWordsToFile baseQuery exceptionalResults
+  _ <- archiveResults $ "./output/" ++ show_ baseQuery
   printEvent "[END] Filter"

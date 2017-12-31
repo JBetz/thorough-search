@@ -16,6 +16,7 @@ module Storage
   , ranQuery
   , writeFilteredWordsToFile
   , writeExceptionalWordsToFile
+  , archiveResults
   ) where
 
 import Config
@@ -30,6 +31,9 @@ import Database.SQLite.Simple as SQL hiding (Query)
 import Filter
 import Model hiding (fromString)
 import System.Directory (createDirectoryIfMissing)
+import Codec.Archive.Zip
+import Path (stripProperPrefix)
+import Path.IO (resolveDir', resolveFile')
 
 
 -- DATABASE
@@ -183,3 +187,11 @@ outputFilePath q subDir metaData =
   show_ q ++
   "-" ++
   tail (concatMap (\(k, v) -> "_" ++ k ++ "=" ++ v) metaData) ++ ".txt"
+
+-- ARCHIVE
+archiveResults :: String -> IO ()
+archiveResults src = do
+  srcPath <- resolveDir' src
+  destPath <- resolveFile' (src ++ ".zip")
+  let f = stripProperPrefix srcPath >=> mkEntrySelector
+  createArchive destPath (packDirRecur BZip2 f srcPath)
