@@ -12,7 +12,7 @@ import Control.Monad.Catch (catch)
 import Control.Monad.Reader
 import Data.Aeson (eitherDecode)
 import Data.ByteString.Lazy (ByteString)
-import Data.List (isSuffixOf)
+import Data.List (isInfixOf)
 import Data.Text (pack)
 import Database.SQLite.Simple (Connection)
 import Filter
@@ -76,7 +76,7 @@ instasearch q = do
 expandQuery :: Query -> [Query]
 expandQuery (Query b e s)  = 
   let expandWith char = Query b (e ++ [char]) s
-      invalid (Query _ e' _) = "  " `isSuffixOf` e' || head e' == ' '
+      invalid (Query _ e' _) = "  " `isInfixOf` e' || head e' == ' '
   in filter (not . invalid) (fmap expandWith (' ' : ['a' .. 'z']))
 
 findExpandables :: [(Query, [String])] -> Int -> [Query]
