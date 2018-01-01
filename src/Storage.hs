@@ -144,15 +144,17 @@ writeFilteredResultSetToFile q (FilteredResultSet rl ss ws) =
           , ("count", show (length ws))
           ]
   in do 
-    _ <- createDirectoryIfMissing False ("./output/" ++ show_ q ++ "/length=" ++ show rl)
+    createDirectoryIfMissing False ("./output/" ++ show_ q ++ "/length=" ++ show rl)
     writeWordsToFile filePath ws
 
-writeExceptionalWordsToFile :: Query -> [String] -> IO [()]
-writeExceptionalWordsToFile q ws =
-  let filePath = outputFilePath q "exceptional" [("count", show (length ws))]
+writeExceptionalWordsToFile :: Query -> [String] -> [String] -> IO [()]
+writeExceptionalWordsToFile q mws nmws =
+  let mFilePath = outputFilePath q "exceptional" [("matchingCount", show (length mws))]
+      nmFilePath = outputFilePath q "exceptional" [("nonMatchingCount", show (length nmws))]
   in do 
-    _ <- createDirectoryIfMissing False ("./output/" ++ show_ q ++ "/exceptional")
-    writeWordsToFile filePath ws
+    createDirectoryIfMissing False ("./output/" ++ show_ q ++ "/exceptional")
+    writeWordsToFile mFilePath mws
+    writeWordsToFile nmFilePath nmws
 
 writeWordsToFile :: String -> [String] -> IO [()]
 writeWordsToFile filePath ws =

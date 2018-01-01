@@ -21,8 +21,8 @@ main = do
   conn <- open $ view databasePath config
   -- run search
   printEvent "[START] Search"
-  _ <- createQueriesTable bq conn
-  _ <- createResultsTable bq conn
+  createQueriesTable bq conn
+  createResultsTable bq conn
   searchResultCount <- recursiveInstasearch bq 1 conn (view filterConfig config, view searchConfig config)
   printStats $ show searchResultCount ++ " search results recorded"
   printEvent "[END] Search"
@@ -39,10 +39,11 @@ main = do
   printStats $ show (length $ concatMap _results filteredResults) ++ " filtered results"
   _ <- writeFilteredWordsToFile bq filteredResults
   -- find and record exceptional results
-  let exceptionalResults = findExceptionalResults bq resultPairs filteredResults
-  printStats $ show (length exceptionalResults) ++ " exceptional results"
-  _ <- writeExceptionalWordsToFile bq exceptionalResults
+  let excMatchingResults = findExceptionalResults bq True resultPairs filteredResults
+  let excNonMatchingResults = findExceptionalResults bq False resultPairs filteredResults
+  printStats $ show (length excMatchingResults + length excNonMatchingResults) ++ " exceptional results"
+  _ <- writeExceptionalWordsToFile bq excMatchingResults excNonMatchingResults
   let outputFile = "./output/" ++ show_ bq
-  _ <- archiveResults outputFile
+  archiveResults outputFile
   -- _ <- emailResults outputFile
   printEvent "[END] Filter"

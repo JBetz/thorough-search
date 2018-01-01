@@ -61,14 +61,16 @@ runFilter (Query _ _ s) resultLength (unsorted, sorted) wordList =
   in FilteredResultSet resultLength (_size wordList) filteredResults
 
 -- FINDERS
-findExceptionalResults :: Query -> [(String, String)] -> [FilteredResultSet] -> [String]
-findExceptionalResults (Query _ _ s) allResults frs =
+findExceptionalResults :: Query -> Bool -> [(String, String)] -> [FilteredResultSet] -> [String]
+findExceptionalResults bq@(Query _ _ s) matching allResults frs =
   let filteredResults = concatMap _results frs
   in snd <$>
       filter
         (\(query, result) ->
-          length (concat $ extractExpansion s query) <= 2 && 
-          result `notElem` filteredResults
+          let match = bq `matches` result
+          in (if matching then match else not match) &&
+             length (concat $ extractExpansion s query) <= 2 && 
+             result `notElem` filteredResults
         )
         allResults
 
