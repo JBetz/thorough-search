@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Instasearch
+module Search
   ( instasearch
   , recursiveInstasearch
   ) where
@@ -14,56 +14,57 @@ import Data.Aeson (eitherDecode)
 import Data.ByteString.Lazy (ByteString)
 import Data.List (isSuffixOf)
 import Data.Text (pack)
+import Database.SQLite.Simple (Connection)
 import Filter
 import Model
 import Network.HTTP.Client (HttpException)
 import Network.Wreq
 import Storage
 
-recursiveInstasearch :: Query -> Int -> App Int
-recursiveInstasearch q maxQueryLength = do
-  (Config bq _) <- ask
+recursiveInstasearch :: Query -> Int -> Connection -> (FilterConfig, SearchConfig) -> IO Int
+recursiveInstasearch q maxQueryLength conn cfg@(fcfg, scfg@(SearchConfig mfs _ _)) = do
   -- run with next max query length
-  liftIO $ printInfo $ "running with max query length " ++ show maxQueryLength
-  curResultCount <- recursiveInstasearch' q maxQueryLength
+  printInfo $ "running with max query length " ++ show maxQueryLength
+  curResultCount <- recursiveInstasearch' q maxQueryLength conn scfg
   -- get current count
-  curResults <- selectUniqueResults
-  curFilteredResults <- liftIO $ filterResults bq 4 (fmap snd curResults)
+  curResults <- selectUniqueResults q conn
+  curFilteredResults <- liftIO $ filterResults q 4 (filter (matches q) (fmap snd curResults)) fcfg
   let curFilteredResultCount = length $ concatMap _results curFilteredResults
-  liftIO $ printStats $ show curFilteredResultCount ++ " filtered results"
+  printStats $ show curFilteredResultCount ++ " filtered results"
   -- recurse if there's more to find
-  if curResultCount == 0 || curFilteredResultCount > 3000
+  if curResultCount == 0 || curFilteredResultCount > mfs
     then pure curResultCount
     else do
-      nextResultCount <- recursiveInstasearch q (maxQueryLength + 1)
+      nextResultCount <- recursiveInstasearch q (maxQueryLength + 1) conn cfg
       pure $ curResultCount + nextResultCount
 
-recursiveInstasearch' :: Query -> Int -> App Int
-recursiveInstasearch' q maxQueryLength = do
-  results <- traverse instasearchWithRetry (expandQuery q)
+recursiveInstasearch' :: Query -> Int -> Connection -> SearchConfig -> IO Int
+recursiveInstasearch' q maxQueryLength conn cfg = do
+  results <- traverse (\eq -> instasearchWithRetry eq conn cfg) (expandQuery q)
   let newQueries = findExpandables results maxQueryLength
   let resultCount = sum $ fmap (length . snd) results
-  recResults <- traverse (`recursiveInstasearch'` maxQueryLength) newQueries
+  recResults <- traverse (\nq -> recursiveInstasearch' nq maxQueryLength conn cfg) newQueries
   pure $ resultCount + sum recResults
 
-instasearchWithRetry :: Query -> App (Query, [String])
-instasearchWithRetry q =
+instasearchWithRetry :: Query -> Connection -> SearchConfig -> IO (Query, [String])
+instasearchWithRetry q conn cfg@(SearchConfig _ _ rd) =
   catch
-    (instasearchWithCache q)
+    (instasearchWithCache q conn cfg)
     (\e -> do
-       liftIO $ putStrLn $ show (e :: HttpException)
-       liftIO $ secondsThreadDelay 300
-       instasearchWithCache q)
+       putStrLn $ show (e :: HttpException)
+       secondsThreadDelay rd
+       instasearchWithCache q conn cfg)
 
-instasearchWithCache :: Query -> App (Query, [String])
-instasearchWithCache q = do
-  alreadyRan <- ranQuery q
+instasearchWithCache :: Query -> Connection -> SearchConfig -> IO (Query, [String])
+instasearchWithCache q conn(SearchConfig _ isd _) = do
+  alreadyRan <- ranQuery q conn
   if alreadyRan
-    then selectQueryResults q
+    then selectQueryResults q conn
     else do
-      liftIO $ print $ show q
-      results <- liftIO $ instasearch q
-      _ <- insertResultList (q, results)
+      print $ show q
+      secondsThreadDelay isd
+      results <- instasearch q
+      _ <- insertResultList (q, results) conn
       pure (q, results)
 
 instasearch :: Query -> IO [String]

@@ -7,7 +7,6 @@ module Model
   , show_
   ) where
 
-import Data.Char (isSeparator)
 import Data.List
 
 -- DATATYPES
@@ -29,11 +28,11 @@ instance Show Query where
       XWord -> e ++ " " ++ b
 
 show_ :: Query -> String
-show_ q@(Query _ _ s) = 
-  let sanitized = fmap (\c -> if isSeparator c then '_' else c) (show q) 
-  in case s of 
-      XWord -> "X" ++ sanitized
-      _ ->  sanitized ++ "X"
+show_ (Query b _ s) = 
+  case s of
+    WordX -> b ++ "_X"
+    WordOfX -> b ++ "_of_X"
+    XWord -> "X_" ++ b
 
 -- PARSING
 fromString :: String -> Query

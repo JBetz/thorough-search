@@ -8,6 +8,7 @@ module Filter
   , FilteredResultSet(..)
   ) where
 
+import Config
 import Control.Monad
 import Data.Set (Set, (\\), union, fromList, empty, elems)
 import Model
@@ -22,12 +23,11 @@ data FilteredResultSet = FilteredResultSet
 instance Show FilteredResultSet where 
   show frs = show $ _resultLength frs
 
-filterResults :: Query -> Int -> [String] -> IO [FilteredResultSet]
-filterResults q maxLength results = do
-  wordLists <- loadWordLists
-  let matchingResults = filter (matches q) results
+filterResults :: Query -> Int -> [String] -> FilterConfig -> IO [FilteredResultSet]
+filterResults q maxLength results (FilterConfig sws) = do
+  wordLists <- loadWordLists sws
   let accWordLists = accumulatedWordLists wordLists
-  pure $ filterResultsByLength q maxLength (fromList matchingResults, []) accWordLists
+  pure $ filterResultsByLength q maxLength (fromList results, []) accWordLists
 
 filterResultsByLength :: Query -> Int -> (Set String, [FilteredResultSet]) -> [WordList] -> [FilteredResultSet]
 filterResultsByLength q maxLength rs@(unsorted, sorted) wordLists = 
@@ -62,12 +62,11 @@ runFilter (Query _ _ s) resultLength (unsorted, sorted) wordList =
 
 -- FINDERS
 findExceptionalResults :: Query -> [(String, String)] -> [FilteredResultSet] -> [String]
-findExceptionalResults bq@(Query _ _ s) allResults frs =
+findExceptionalResults (Query _ _ s) allResults frs =
   let filteredResults = concatMap _results frs
   in snd <$>
       filter
         (\(query, result) ->
-          (bq `matches` result) &&
           length (concat $ extractExpansion s query) <= 2 && 
           result `notElem` filteredResults
         )
@@ -92,24 +91,18 @@ data Size
   | S95
   deriving (Read, Enum, Show)
 
-wordSetNames :: [String]
-wordSetNames = ["english-words", "american-words", "british-words"]
-
 toInt :: Size -> Int
 toInt size = read $ drop 1 (show size)
 
 fromInt :: Int -> Size
 fromInt int = read $ "S" ++ show int
 
-loadWordLists :: IO [WordList]
-loadWordLists = traverse loadWordList (enumFromTo S10 S95)
+loadWordLists :: [String] -> IO [WordList]
+loadWordLists names = traverse (`loadWordList` names) (enumFromTo S10 S95)
 
-loadWordList :: Size -> IO WordList
-loadWordList size = do
-  let fileNames =
-        fmap
-          (\name -> "./scowl/final/" ++ name ++ "." ++ show (toInt size))
-          wordSetNames
+loadWordList :: Size -> [String] -> IO WordList
+loadWordList size names = do
+  let fileNames = fmap (\n -> "./scowl/final/" ++ n ++ "." ++ show (toInt size)) names
   fileContents <- traverse readFile fileNames
   pure $ WordList size (fromList $ join (fmap lines fileContents))
 

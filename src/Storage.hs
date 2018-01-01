@@ -8,7 +8,6 @@ module Storage
   ( ResultsField(..)
   , createQueriesTable
   , createResultsTable
-  , connStr
   , insertResultList
   , selectAllResults
   , selectUniqueResults
@@ -17,9 +16,10 @@ module Storage
   , writeFilteredWordsToFile
   , writeExceptionalWordsToFile
   , archiveResults
+  , emailResults
   ) where
 
-import Config
+import Codec.Archive.Zip
 import Control.Monad.Reader
 import Data.Char (isAscii)
 import Data.List (sort)
@@ -30,11 +30,10 @@ import Data.Tuple (swap)
 import Database.SQLite.Simple as SQL hiding (Query)
 import Filter
 import Model hiding (fromString)
-import System.Directory (createDirectoryIfMissing)
-import Codec.Archive.Zip
+import Network.Mail.SMTP
 import Path (stripProperPrefix)
 import Path.IO (resolveDir', resolveFile')
-
+import System.Directory (createDirectoryIfMissing)
 
 -- DATABASE
 data QueriesField =
@@ -59,91 +58,75 @@ instance ToRow ResultsField where
 instance FromRow QueriesField where
   fromRow = QueriesField <$> field <*> field <*> field <*> field
 
-connStr :: String
-connStr = "file:./output/database.db"
+createQueriesTable :: Query -> Connection -> IO ()
+createQueriesTable q conn = do
+  execute_
+    conn
+    (fromString $
+      "CREATE TABLE IF NOT EXISTS " ++
+      show_ q ++
+      "_queries (id INTEGER PRIMARY KEY, structure TEXT, base TEXT, expansion TEXT UNIQUE)")
 
-createQueriesTable :: App ()
-createQueriesTable = do
-  (Config bq conn) <- ask
-  liftIO $
-    execute_
-      conn
-      (fromString $
-       "CREATE TABLE IF NOT EXISTS " ++
-       show_ bq ++
-       "_queries (id INTEGER PRIMARY KEY, structure TEXT, base TEXT, expansion TEXT UNIQUE)")
+createResultsTable :: Query -> Connection -> IO ()
+createResultsTable q conn = do
+  execute_
+    conn
+    (fromString $
+      "CREATE TABLE IF NOT EXISTS " ++
+      show_ q ++
+      "_results (id INTEGER PRIMARY KEY, query TEXT, result TEXT)")
 
-createResultsTable :: App ()
-createResultsTable = do
-  (Config bq conn) <- ask
-  liftIO $
-    execute_
-      conn
-      (fromString $
-       "CREATE TABLE IF NOT EXISTS " ++
-       show_ bq ++
-       "_results (id INTEGER PRIMARY KEY, query TEXT, result TEXT)")
+insertResultList :: (Query, [String]) -> Connection -> IO [()]
+insertResultList (q, results) conn = do
+  _ <- insertQuery q conn
+  traverse (\r -> insertResult q r conn) results 
 
-insertResultList :: (Query, [String]) -> App [()]
-insertResultList result = do
-  _ <- insertQuery (fst result)
-  traverse (insertResult (fst result)) (snd result)
+insertQuery :: Query -> Connection -> IO ()
+insertQuery q@(Query b e s) conn =
+  execute
+    conn
+    (fromString $
+      "INSERT OR IGNORE INTO " ++
+      show_ q ++ "_queries (structure, base, expansion) VALUES (?, ?, ?)")
+    [show s, b, e]
 
-insertQuery :: Query -> App ()
-insertQuery (Query b e s) = do
-  (Config bq conn) <- ask
-  liftIO $
-    execute
-      conn
-      (fromString $
-       "INSERT OR IGNORE INTO " ++
-       show_ bq ++ "_queries (structure, base, expansion) VALUES (?, ?, ?)")
-      [show s, b, e]
+insertResult :: Query -> String -> Connection -> IO ()
+insertResult q result conn =
+  execute
+    conn
+    (fromString $
+      "INSERT OR IGNORE INTO " ++
+      show_ q ++ "_results (query, result) VALUES (?, ?)")
+    [show q, result]
 
-insertResult :: Query -> String -> App ()
-insertResult q result = do
-  (Config bq conn) <- ask
-  liftIO $
-    execute
-      conn
-      (fromString $
-       "INSERT OR IGNORE INTO " ++
-       show_ bq ++ "_results (query, result) VALUES (?, ?)")
-      [show q, result]
-
-selectUniqueResults :: App [(String, String)]
-selectUniqueResults = do
-  totalResults <- selectAllResults
+selectUniqueResults :: Query -> Connection -> IO [(String, String)]
+selectUniqueResults q conn = do
+  totalResults <- selectAllResults q conn
   let resultPairs = fmap (\(ResultsField _ eq v) -> (unpack eq, unpack v)) totalResults
   let resultMap = fromList $ fmap swap resultPairs
   pure $ fmap swap (assocs resultMap)
 
-selectAllResults :: App [ResultsField]
-selectAllResults = do
-  (Config bq conn) <- ask
-  liftIO $ query_ conn (fromString $ "SELECT * FROM " ++ show_ bq ++ "_results")
+selectAllResults :: Query -> Connection -> IO [ResultsField]
+selectAllResults q conn =
+  query_ conn (fromString $ "SELECT * FROM " ++ show_ q ++ "_results")
 
-ranQuery :: Query -> App Bool
-ranQuery (Query _ e _) = do
-  (Config bq conn) <- ask
-  liftIO $ do
-    res <-
-      SQL.query
-        conn
-        (fromString $ "SELECT * FROM " ++ show_ bq ++ "_queries WHERE expansion = ?")
-        [e] :: IO [QueriesField]
-    pure $ not (null res)
+ranQuery :: Query -> Connection -> IO Bool
+ranQuery q@(Query _ e _) conn = do
+  res <-
+    SQL.query
+      conn
+      (fromString $ "SELECT * FROM " ++ show_ q ++ "_queries WHERE expansion = ?")
+      [e] :: IO [QueriesField]
+  pure $ not (null res)
 
-selectQueryResults :: Query -> App (Query, [String])
-selectQueryResults q = do
-  (Config bq conn) <- ask
-  liftIO $ do
-    res <-
-      SQL.query
-        conn
-        (fromString $ "SELECT * FROM " ++ show_ bq ++ "_results WHERE query = ?")
-        [show q] :: IO [ResultsField]
-    pure (q, fmap (\(ResultsField _ _ v) -> unpack v) res)
+selectQueryResults :: Query -> Connection -> IO (Query, [String])
+selectQueryResults q conn = do
+  res <-
+    SQL.query
+      conn
+      (fromString $ "SELECT * FROM " ++ show_ q ++ "_results WHERE query = ?")
+      [show q] :: IO [ResultsField]
+  pure (q, fmap (\(ResultsField _ _ v) -> unpack v) res)
 
 -- FILE 
 writeFilteredWordsToFile :: Query -> [FilteredResultSet] -> IO [[()]]
@@ -195,3 +178,19 @@ archiveResults src = do
   destPath <- resolveFile' (src ++ ".zip")
   let f = stripProperPrefix srcPath >=> mkEntrySelector
   createArchive destPath (packDirRecur BZip2 f srcPath)
+
+-- EMAIL
+emailResults :: FilePath -> IO ()
+emailResults fp = 
+  let from       = Address Nothing "joebetz91@gmail.com"
+      to         = [Address (Just "Jason Hickner") "joebetz91@gmail.com"]
+      cc         = []
+      bcc        = []
+      subject    = "email subject"
+      body       = plainTextPart "email body"
+      html       = htmlPart "<h1>HTML</h1>"
+      host       = "73.176.149.193"
+  in do
+    attachment <- filePart "application/octet-stream" fp
+    let mail = simpleMail from to cc bcc subject [body, html, attachment]
+    sendMail host mail
