@@ -76,7 +76,7 @@ instasearch q = do
 expandQuery :: Query -> [Query]
 expandQuery (Query b e s)  = 
   let expandWith char = Query b (e ++ [char]) s
-      invalid (Query _ e' _) = "  " `isInfixOf` e' || head e' == ' '
+      invalid q = "  " `isInfixOf` (show q) || head (show q) == ' '
   in filter (not . invalid) (fmap expandWith (' ' : ['a' .. 'z']))
 
 findExpandables :: [(Query, [String])] -> Int -> [Query]
