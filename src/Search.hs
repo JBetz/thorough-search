@@ -38,7 +38,7 @@ recursiveInstasearch q conn cfg@(fcfg, scfg) = do
 
 recursiveInstasearch' :: Query -> Connection -> SearchConfig -> IO Int
 recursiveInstasearch' q@(Query _ e _) conn cfg@(SearchConfig mql _ _) =
-  if length e < mql 
+  if length e <= mql 
     then do 
       print $ show q
       results <- traverse (\eq -> instasearchWithRetry eq conn cfg) (expandQuery q)
