@@ -21,30 +21,31 @@ import Network.HTTP.Client (HttpException)
 import Network.Wreq
 import Storage
 
-recursiveInstasearch :: Query -> Int -> Connection -> (FilterConfig, SearchConfig) -> IO Int
-recursiveInstasearch q maxQueryLength conn cfg@(fcfg, scfg@(SearchConfig mfs _ _)) = do
-  -- run with next max query length
-  printInfo $ "running with max query length " ++ show maxQueryLength
-  curResultCount <- recursiveInstasearch' q maxQueryLength conn scfg
+recursiveInstasearch :: Query -> Connection -> (FilterConfig, SearchConfig) -> IO Int
+recursiveInstasearch q conn cfg@(fcfg, scfg) = do
+  curResultCount <- recursiveInstasearch' q conn scfg
   -- get current count
   curResults <- selectUniqueResults q conn
-  curFilteredResults <- liftIO $ filterResults q 4 (filter (matches q) (fmap snd curResults)) fcfg
+  curFilteredResults <- liftIO $ filterResults q (filter (matches q) (fmap snd curResults)) fcfg
   let curFilteredResultCount = length $ concatMap _results curFilteredResults
   printStats $ show curFilteredResultCount ++ " filtered results"
   -- recurse if there's more to find
-  if curResultCount == 0 || curFilteredResultCount > mfs
+  if curResultCount == 0
     then pure curResultCount
     else do
-      nextResultCount <- recursiveInstasearch q (maxQueryLength + 1) conn cfg
+      nextResultCount <- recursiveInstasearch q conn cfg
       pure $ curResultCount + nextResultCount
 
-recursiveInstasearch' :: Query -> Int -> Connection -> SearchConfig -> IO Int
-recursiveInstasearch' q maxQueryLength conn cfg = do
-  results <- traverse (\eq -> instasearchWithRetry eq conn cfg) (expandQuery q)
-  let newQueries = findExpandables results maxQueryLength
-  let resultCount = sum $ fmap (length . snd) results
-  recResults <- traverse (\nq -> recursiveInstasearch' nq maxQueryLength conn cfg) newQueries
-  pure $ resultCount + sum recResults
+recursiveInstasearch' :: Query -> Connection -> SearchConfig -> IO Int
+recursiveInstasearch' q@(Query _ e _) conn cfg@(SearchConfig mql _ _) =
+  if length e < mql 
+    then do 
+      results <- traverse (\eq -> instasearchWithRetry eq conn cfg) (expandQuery q)
+      let newQueries = findExpandables results
+      let resultCount = sum $ fmap (length . snd) results
+      recResults <- traverse (\nq -> recursiveInstasearch' nq conn cfg) newQueries
+      pure $ resultCount + sum recResults
+    else pure 0
 
 instasearchWithRetry :: Query -> Connection -> SearchConfig -> IO (Query, [String])
 instasearchWithRetry q conn cfg@(SearchConfig _ _ rd) =
@@ -70,7 +71,7 @@ instasearchWithCache q conn(SearchConfig _ isd _) = do
 instasearch :: Query -> IO [String]
 instasearch q = do
   let opts = defaults & param "q" .~ [pack $ show q] & param "client" .~ ["firefox"]
-  response <- getWith opts "https://www.google.com/complete/search"
+  response <- getWith opts "https://www.google.com/complete/search" 
   pure $ parseResponse (response ^. responseBody)
 
 expandQuery :: Query -> [Query]
@@ -80,14 +81,10 @@ expandQuery (Query b e s)  =
         where sq = show q
   in filter (not . invalid) (fmap expandWith (' ' : ['a' .. 'z']))
 
-findExpandables :: [(Query, [String])] -> Int -> [Query]
-findExpandables queries maxQueryLength =
-  fmap
-    fst
-    (filter
-       (\(q, results) ->
-          length (expansion q) < maxQueryLength && length results == 10)
-       queries)
+findExpandables :: [(Query, [String])] -> [Query]
+findExpandables queries =
+  fmap fst
+    (filter (\q -> (length . snd) q == 10) queries)
 
 parseResponse :: ByteString -> [String]
 parseResponse response =

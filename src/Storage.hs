@@ -14,14 +14,11 @@ module Storage
   , selectQueryResults
   , ranQuery
   , writeFilteredWordsToFile
-  , writeExceptionalWordsToFile
-  , archiveResults
   , emailResults
   ) where
 
-import Codec.Archive.Zip
-import Control.Monad.Reader
 import Data.Char (isAscii)
+import Data.Function (on)
 import Data.List (sort)
 import Data.Map (assocs, fromList)
 import Data.String (fromString)
@@ -31,8 +28,6 @@ import Database.SQLite.Simple as SQL hiding (Query)
 import Filter
 import Model hiding (fromString)
 import Network.Mail.SMTP
-import Path (stripProperPrefix)
-import Path.IO (resolveDir', resolveFile')
 import System.Directory (createDirectoryIfMissing)
 
 -- DATABASE
@@ -129,57 +124,36 @@ selectQueryResults q conn = do
   pure (q, fmap (\(ResultsField _ _ v) -> unpack v) res)
 
 -- FILE 
-writeFilteredWordsToFile :: Query -> [FilteredResultSet] -> IO [[()]]
+writeFilteredWordsToFile :: Query -> [FilteredResultSet] -> IO [()]
 writeFilteredWordsToFile q frs = do
   _ <- createDirectoryIfMissing False ("./output/" ++ show_ q)
-  traverse (writeFilteredResultSetToFile q) frs
+  let counts = fmap (length . _results) frs
+  traverse (writeFilteredResultSetToFile q) (zip (cumulativePercentages counts) frs)
 
-writeFilteredResultSetToFile :: Query -> FilteredResultSet -> IO [()]
-writeFilteredResultSetToFile q (FilteredResultSet rl ss ws) =
-  let filePath =
-        outputFilePath
-          q
-          ("length=" ++ show rl)
-          [ ("scowlSize", show ss)
-          , ("count", show (length ws))
-          ]
-  in do 
-    createDirectoryIfMissing False ("./output/" ++ show_ q ++ "/length=" ++ show rl)
-    writeWordsToFile filePath ws
+writeFilteredResultSetToFile :: Query -> (Int, FilteredResultSet) -> IO ()
+writeFilteredResultSetToFile q (cp, (FilteredResultSet _ ws)) =
+  let filePath = outputFilePath q (length ws)
+  in writeWordsToFile filePath ws cp
 
-writeExceptionalWordsToFile :: Query -> [String] -> [String] -> IO [()]
-writeExceptionalWordsToFile q mws nmws =
-  let mFilePath = outputFilePath q "exceptional" [("matchingCount", show (length mws))]
-      nmFilePath = outputFilePath q "exceptional" [("nonMatchingCount", show (length nmws))]
-  in do 
-    createDirectoryIfMissing False ("./output/" ++ show_ q ++ "/exceptional")
-    writeWordsToFile mFilePath mws
-    writeWordsToFile nmFilePath nmws
-
-writeWordsToFile :: String -> [String] -> IO [()]
-writeWordsToFile filePath ws =
+writeWordsToFile :: String -> [String] -> Int -> IO ()
+writeWordsToFile filePath ws cp = do
   sequence $ do
     word <- sort ws
     pure $ appendFile filePath (filter isAscii word ++ "\n")
+  let separators = take 20 (repeat '=')
+  appendFile filePath $ "\n" ++ separators ++ " " ++ show cp ++ "% " ++ separators ++ "\n"
 
-outputFilePath :: Query -> String -> [(String, String)] -> String
-outputFilePath q subDir metaData =
-  "./output/" ++
-  show_ q ++
-  "/" ++ 
-  subDir ++
-  "/" ++
-  show_ q ++
-  "-" ++
-  tail (concatMap (\(k, v) -> "_" ++ k ++ "=" ++ v) metaData) ++ ".txt"
+outputFilePath :: Query -> Int -> String
+outputFilePath q count =
+  "./output/" ++ show_ q ++ "-" ++ show count ++ ".txt"
 
--- ARCHIVE
-archiveResults :: String -> IO ()
-archiveResults src = do
-  srcPath <- resolveDir' src
-  destPath <- resolveFile' (src ++ ".zip")
-  let f = stripProperPrefix srcPath >=> mkEntrySelector
-  createArchive destPath (packDirRecur BZip2 f srcPath)
+-- convert number counts into percentages of total
+cumulativePercentages :: [Int] -> [Int]
+cumulativePercentages counts =
+  let runningCounts = scanl1 (+) counts
+      total = last runningCounts
+      floatDiv = (/) `on` fromIntegral :: Int -> Int -> Float
+  in fmap (\rc -> round $ (rc * 100) `floatDiv` total) runningCounts
 
 -- EMAIL
 emailResults :: FilePath -> IO ()

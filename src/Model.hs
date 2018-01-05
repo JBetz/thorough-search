@@ -11,9 +11,9 @@ import Data.List
 
 -- DATATYPES
 data Query = Query
-  { base :: String 
-  , expansion :: String
-  , structure :: Structure
+  { _base :: String 
+  , _expansion :: String
+  , _structure :: Structure
   }
 
 data Structure = WordX | WordOfX | XWord

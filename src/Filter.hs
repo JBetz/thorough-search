@@ -15,50 +15,37 @@ import Model
 
 -- FILTERS
 data FilteredResultSet = FilteredResultSet
-  { _resultLength :: Int
-  , _scowlSize :: Size
+  { _scowlSize :: Size
   , _results :: [String] 
   }
 
-instance Show FilteredResultSet where 
-  show frs = show $ _resultLength frs
-
-filterResults :: Query -> Int -> [String] -> FilterConfig -> IO [FilteredResultSet]
-filterResults q maxLength results (FilterConfig sws) = do
+filterResults :: Query -> [String] -> FilterConfig -> IO [FilteredResultSet]
+filterResults q results (FilterConfig sws) = do
   wordLists <- loadWordLists sws
   let accWordLists = accumulatedWordLists wordLists
-  pure $ filterResultsByLength q maxLength (fromList results, []) accWordLists
+  pure $ filterResultsByScowlSet q (fromList results, []) accWordLists
 
-filterResultsByLength :: Query -> Int -> (Set String, [FilteredResultSet]) -> [WordList] -> [FilteredResultSet]
-filterResultsByLength q maxLength rs@(unsorted, sorted) wordLists = 
-  if maxLength == 0 
-    then sorted
-  else 
-    let newSorted = filterResultsByScowlSet q maxLength rs wordLists
-    in filterResultsByLength q (maxLength - 1) (unsorted \\ (fromList $ concatMap _results newSorted), newSorted) wordLists
-
-filterResultsByScowlSet :: Query -> Int -> (Set String, [FilteredResultSet]) -> [WordList] -> [FilteredResultSet]
-filterResultsByScowlSet q resultLength rs@(unsorted, sorted) scowlSets =
+filterResultsByScowlSet :: Query -> (Set String, [FilteredResultSet]) -> [WordList] -> [FilteredResultSet]
+filterResultsByScowlSet q rs@(unsorted, sorted) scowlSets =
   if null scowlSets
     then sorted
   else 
     let (x:xs) = scowlSets
-        newSorted = runFilter q resultLength rs x
+        newSorted = runFilter q rs x
         allSorted = sorted ++ [newSorted]
-    in filterResultsByScowlSet q resultLength (unsorted \\ (fromList $ _results newSorted), allSorted) xs 
+    in filterResultsByScowlSet q (unsorted \\ (fromList $ _results newSorted), allSorted) xs 
 
-runFilter :: Query -> Int -> (Set String, [FilteredResultSet]) -> WordList -> FilteredResultSet
-runFilter (Query _ _ s) resultLength (unsorted, sorted) wordList = 
+runFilter :: Query -> (Set String, [FilteredResultSet]) -> WordList -> FilteredResultSet
+runFilter (Query _ _ s) (unsorted, sorted) wordList = 
   let sortedResultList = concatMap _results sorted
       filteredResults = do
         result <- elems unsorted
         let resultDiff = extractExpansion s result
         guard $
-          (length resultDiff == resultLength) &&
           null (fromList resultDiff \\ _words wordList) &&
           (result `notElem` sortedResultList)
         pure result
-  in FilteredResultSet resultLength (_size wordList) filteredResults
+  in FilteredResultSet (_size wordList) filteredResults
 
 -- FINDERS
 findExceptionalResults :: Query -> Bool -> [(String, String)] -> [FilteredResultSet] -> [String]
