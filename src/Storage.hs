@@ -147,7 +147,6 @@ outputFilePath :: Query -> Int -> String
 outputFilePath q count =
   "./output/" ++ show_ q ++ "-" ++ show count ++ ".txt"
 
--- convert number counts into percentages of total
 cumulativePercentages :: [Int] -> [Int]
 cumulativePercentages counts =
   let runningCounts = scanl1 (+) counts
@@ -158,14 +157,14 @@ cumulativePercentages counts =
 -- EMAIL
 emailResults :: FilePath -> IO ()
 emailResults fp = 
-  let from       = Address Nothing "joebetz91@gmail.com"
-      to         = [Address (Just "Jason Hickner") "joebetz91@gmail.com"]
+  let from       = Address Nothing ""
+      to         = [Address (Just "Jason Hickner") ""]
       cc         = []
       bcc        = []
       subject    = "email subject"
       body       = plainTextPart "email body"
       html       = htmlPart "<h1>HTML</h1>"
-      host       = "73.176.149.193"
+      host       = ""
   in do
     attachment <- filePart "application/octet-stream" fp
     let mail = simpleMail from to cc bcc subject [body, html, attachment]
