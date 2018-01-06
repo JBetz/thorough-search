@@ -25,8 +25,7 @@ recursiveInstasearch q@(Query _ e _) conn cfg@(SearchConfig mql _ _) =
     then do 
       print $ show q
       results <- traverse (\eq -> instasearchWithRetry eq conn cfg) (expandQuery q)
-      let newQueries = findExpandables results
-      recResults <- traverse (\nq -> recursiveInstasearch nq conn cfg) newQueries
+      recResults <- traverse (\nq -> recursiveInstasearch nq conn cfg) (findExpandables results)
       pure $ sum (fmap snd results) + sum recResults
     else pure 0
 
@@ -43,12 +42,14 @@ instasearchWithCache :: Query -> Connection -> SearchConfig -> IO (Query, Int)
 instasearchWithCache q conn(SearchConfig _ isd _) = do
   alreadyRan <- ranQuery q conn
   if alreadyRan
-    then selectQueryResultCount q conn
+    then do 
+      resultCount <- selectQueryResultCount q conn
+      pure (q, resultCount)
     else do
       secondsThreadDelay isd
       results <- instasearch q
-      rc <- insertResultList (q, results) conn
-      pure (q, rc)
+      resultCount <- insertResultList (q, results) conn
+      pure (q, resultCount)
 
 instasearch :: Query -> IO [String]
 instasearch q = do
@@ -74,4 +75,5 @@ parseResponse response =
     Right (_, vals) -> vals
 
 secondsThreadDelay :: Int -> IO ()
-secondsThreadDelay seconds = threadDelay $ seconds * 1000 * 1000
+secondsThreadDelay seconds = 
+  threadDelay $ seconds * 1000 * 1000

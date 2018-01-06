@@ -118,14 +118,14 @@ ranQuery q@(Query _ e _) conn = do
       [e] :: IO [QueriesRow]
   pure $ not (null res)
 
-selectQueryResultCount :: Query -> Connection -> IO (Query, Int)
+selectQueryResultCount :: Query -> Connection -> IO Int
 selectQueryResultCount q conn = do
   (Only res):_ <-
     SQL.query
       conn
       (fromString $ "SELECT COUNT(*) FROM " ++ show_ q ++ "_results WHERE query = ?")
       [show q] :: IO [(Only Int)]
-  pure (q, res)
+  pure res
 
 -- FILE 
 writeFilteredWordsToFile :: Query -> [FilteredResultSet] -> IO [()]
