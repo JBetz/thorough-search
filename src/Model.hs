@@ -39,7 +39,7 @@ fromString :: String -> Query
 fromString string = 
   let mIndex = elemIndex 'X' string
       strLength = length string
-      errorMessage = "invalid query, needs to be of form '<word> X', '<word> of X', or 'X <word>'"
+      errorMsg = "invalid query, needs to be of form '<word> X', '<word> of X', or 'X <word>'"
   in case mIndex of
       Just 0 -> Query (drop 2 string) "" XWord 
       Just index -> 
@@ -47,8 +47,8 @@ fromString string =
           then if " of " `isInfixOf` string 
             then Query (take (strLength - 5) string) "" WordOfX
             else Query (take (strLength - 2) string) "" WordX
-          else error errorMessage
-      Nothing -> error errorMessage
+          else error errorMsg
+      Nothing -> error errorMsg
 
 -- TESTING
 matches :: Query -> String -> Bool
