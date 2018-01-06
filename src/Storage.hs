@@ -22,7 +22,7 @@ import Data.Function (on)
 import Data.List (sort)
 import Data.Map (assocs, fromList)
 import Data.String (fromString)
-import Data.Text (Text, unpack)
+import Data.Text.Lazy (Text, unpack, pack)
 import Data.Tuple (swap)
 import Database.SQLite.Simple as SQL hiding (Query)
 import Filter
@@ -32,16 +32,11 @@ import System.Directory (createDirectoryIfMissing)
 
 -- DATABASE
 data QueriesRow =
-  QueriesRow Int
-               Text
-               Text
-               Text
+  QueriesRow Int Text Text Text Int
   deriving (Show)
 
 data ResultsRow =
-  ResultsRow Int
-               Text
-               Text
+  ResultsRow Int Text Text
   deriving (Show)
 
 --instance FromRow Int where
@@ -54,7 +49,10 @@ instance ToRow ResultsRow where
   toRow (ResultsRow id_ q r) = toRow (id_, q, r)
 
 instance FromRow QueriesRow where
-  fromRow = QueriesRow <$> field <*> field <*> field <*> field
+  fromRow = QueriesRow <$> field <*> field <*> field <*> field <*> field
+
+instance ToRow QueriesRow where
+  toRow (QueriesRow id_ s b e rc) = toRow (id_, s, b, e, rc)
 
 createQueriesTable :: Query -> Connection -> IO ()
 createQueriesTable q conn = do
@@ -63,7 +61,7 @@ createQueriesTable q conn = do
     (fromString $
       "CREATE TABLE IF NOT EXISTS " ++
       show_ q ++
-      "_queries (id INTEGER PRIMARY KEY, structure TEXT, base TEXT, expansion TEXT UNIQUE)")
+      "_queries (id INTEGER PRIMARY KEY, structure TEXT, base TEXT, expansion TEXT UNIQUE, result_count INTEGER)")
 
 createResultsTable :: Query -> Connection -> IO ()
 createResultsTable q conn = do
@@ -76,18 +74,18 @@ createResultsTable q conn = do
 
 insertResultList :: (Query, [String]) -> Connection -> IO Int
 insertResultList (q, results) conn = do
-  _ <- insertQuery q conn
+  _ <- insertQuery q (length results) conn
   rs <- traverse (\r -> insertResult q r conn) results 
   pure $ length rs
 
-insertQuery :: Query -> Connection -> IO ()
-insertQuery q@(Query b e s) conn =
+insertQuery :: Query -> Int -> Connection -> IO ()
+insertQuery q@(Query b e s) resultCount conn =
   execute
     conn
     (fromString $
       "INSERT OR IGNORE INTO " ++
-      show_ q ++ "_queries (structure, base, expansion) VALUES (?, ?, ?)")
-    [show s, b, e]
+      show_ q ++ "_queries (structure, base, expansion, result_count) VALUES (?, ?, ?, ?)")
+    (toRow (show s, b, e, resultCount))
 
 insertResult :: Query -> String -> Connection -> IO ()
 insertResult q result conn =
@@ -119,13 +117,13 @@ ranQuery q@(Query _ e _) conn = do
   pure $ not (null res)
 
 selectQueryResultCount :: Query -> Connection -> IO Int
-selectQueryResultCount q conn = do
-  (Only res):_ <-
+selectQueryResultCount q@(Query _ e _) conn = do
+  res <-
     SQL.query
       conn
-      (fromString $ "SELECT COUNT(*) FROM " ++ show_ q ++ "_results WHERE query = ?")
-      [show q] :: IO [(Only Int)]
-  pure res
+      (fromString $ "SELECT result_count FROM " ++ show_ q ++ "_queries WHERE expansion = ?")
+      [e] :: IO [Only Int]
+  pure $ (fromOnly . head) res
 
 -- FILE 
 writeFilteredWordsToFile :: Query -> [FilteredResultSet] -> IO [()]
