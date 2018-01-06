@@ -5,13 +5,13 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Storage
-  ( ResultsField(..)
+  ( ResultsRow(..)
   , createQueriesTable
   , createResultsTable
   , insertResultList
   , selectAllResults
   , selectUniqueResults
-  , selectQueryResults
+  , selectQueryResultCount
   , ranQuery
   , writeFilteredWordsToFile
   , emailResults
@@ -31,27 +31,30 @@ import Network.Mail.SMTP
 import System.Directory (createDirectoryIfMissing)
 
 -- DATABASE
-data QueriesField =
-  QueriesField Int
+data QueriesRow =
+  QueriesRow Int
                Text
                Text
                Text
   deriving (Show)
 
-data ResultsField =
-  ResultsField Int
+data ResultsRow =
+  ResultsRow Int
                Text
                Text
   deriving (Show)
 
-instance FromRow ResultsField where
-  fromRow = ResultsField <$> field <*> field <*> field
+--instance FromRow Int where
+--  fromRow = field
 
-instance ToRow ResultsField where
-  toRow (ResultsField id_ q r) = toRow (id_, q, r)
+instance FromRow ResultsRow where
+  fromRow = ResultsRow <$> field <*> field <*> field
 
-instance FromRow QueriesField where
-  fromRow = QueriesField <$> field <*> field <*> field <*> field
+instance ToRow ResultsRow where
+  toRow (ResultsRow id_ q r) = toRow (id_, q, r)
+
+instance FromRow QueriesRow where
+  fromRow = QueriesRow <$> field <*> field <*> field <*> field
 
 createQueriesTable :: Query -> Connection -> IO ()
 createQueriesTable q conn = do
@@ -71,10 +74,11 @@ createResultsTable q conn = do
       show_ q ++
       "_results (id INTEGER PRIMARY KEY, query TEXT, result TEXT, CONSTRAINT UC_results UNIQUE (query, result))")
 
-insertResultList :: (Query, [String]) -> Connection -> IO [()]
+insertResultList :: (Query, [String]) -> Connection -> IO Int
 insertResultList (q, results) conn = do
   _ <- insertQuery q conn
-  traverse (\r -> insertResult q r conn) results 
+  rs <- traverse (\r -> insertResult q r conn) results 
+  pure $ length rs
 
 insertQuery :: Query -> Connection -> IO ()
 insertQuery q@(Query b e s) conn =
@@ -97,11 +101,11 @@ insertResult q result conn =
 selectUniqueResults :: Query -> Connection -> IO [(String, String)]
 selectUniqueResults q conn = do
   totalResults <- selectAllResults q conn
-  let resultPairs = fmap (\(ResultsField _ eq v) -> (unpack eq, unpack v)) totalResults
+  let resultPairs = fmap (\(ResultsRow _ eq v) -> (unpack eq, unpack v)) totalResults
   let resultMap = fromList $ fmap swap resultPairs
   pure $ fmap swap (assocs resultMap)
 
-selectAllResults :: Query -> Connection -> IO [ResultsField]
+selectAllResults :: Query -> Connection -> IO [ResultsRow]
 selectAllResults q conn =
   query_ conn (fromString $ "SELECT * FROM " ++ show_ q ++ "_results")
 
@@ -111,17 +115,17 @@ ranQuery q@(Query _ e _) conn = do
     SQL.query
       conn
       (fromString $ "SELECT * FROM " ++ show_ q ++ "_queries WHERE expansion = ?")
-      [e] :: IO [QueriesField]
+      [e] :: IO [QueriesRow]
   pure $ not (null res)
 
-selectQueryResults :: Query -> Connection -> IO (Query, [String])
-selectQueryResults q conn = do
-  res <-
+selectQueryResultCount :: Query -> Connection -> IO (Query, Int)
+selectQueryResultCount q conn = do
+  (Only res):_ <-
     SQL.query
       conn
-      (fromString $ "SELECT * FROM " ++ show_ q ++ "_results WHERE query = ?")
-      [show q] :: IO [ResultsField]
-  pure (q, fmap (\(ResultsField _ _ v) -> unpack v) res)
+      (fromString $ "SELECT COUNT(*) FROM " ++ show_ q ++ "_results WHERE query = ?")
+      [show q] :: IO [(Only Int)]
+  pure (q, res)
 
 -- FILE 
 writeFilteredWordsToFile :: Query -> [FilteredResultSet] -> IO [()]

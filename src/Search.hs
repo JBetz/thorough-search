@@ -27,10 +27,10 @@ recursiveInstasearch q@(Query _ e _) conn cfg@(SearchConfig mql _ _) =
       results <- traverse (\eq -> instasearchWithRetry eq conn cfg) (expandQuery q)
       let newQueries = findExpandables results
       recResults <- traverse (\nq -> recursiveInstasearch nq conn cfg) newQueries
-      pure $ sum (fmap (length . snd) results) + sum recResults
+      pure $ sum (fmap snd results) + sum recResults
     else pure 0
 
-instasearchWithRetry :: Query -> Connection -> SearchConfig -> IO (Query, [String])
+instasearchWithRetry :: Query -> Connection -> SearchConfig -> IO (Query, Int)
 instasearchWithRetry q conn cfg@(SearchConfig _ _ rd) =
   catch
     (instasearchWithCache q conn cfg)
@@ -39,16 +39,16 @@ instasearchWithRetry q conn cfg@(SearchConfig _ _ rd) =
        secondsThreadDelay rd
        instasearchWithCache q conn cfg)
 
-instasearchWithCache :: Query -> Connection -> SearchConfig -> IO (Query, [String])
+instasearchWithCache :: Query -> Connection -> SearchConfig -> IO (Query, Int)
 instasearchWithCache q conn(SearchConfig _ isd _) = do
   alreadyRan <- ranQuery q conn
   if alreadyRan
-    then selectQueryResults q conn
+    then selectQueryResultCount q conn
     else do
       secondsThreadDelay isd
       results <- instasearch q
-      _ <- insertResultList (q, results) conn
-      pure (q, results)
+      rc <- insertResultList (q, results) conn
+      pure (q, rc)
 
 instasearch :: Query -> IO [String]
 instasearch q = do
@@ -63,10 +63,9 @@ expandQuery (Query b e s)  =
         where sq = show q
   in filter (not . invalid) (fmap expandWith (' ' : ['a' .. 'z']))
 
-findExpandables :: [(Query, [String])] -> [Query]
+findExpandables :: [(Query, Int)] -> [Query]
 findExpandables queries =
-  fmap fst
-    (filter (\q -> (length . snd) q == 10) queries)
+  fmap fst (filter (\q -> snd q == 10) queries)
 
 parseResponse :: ByteString -> [String]
 parseResponse response =
