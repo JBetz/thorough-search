@@ -22,7 +22,7 @@ import Data.Function (on)
 import Data.List (sort)
 import Data.Map (assocs, fromList)
 import Data.String (fromString)
-import Data.Text.Lazy (Text, unpack, pack)
+import Data.Text (Text, unpack)
 import Data.Tuple (swap)
 import Database.SQLite.Simple as SQL hiding (Query)
 import Filter
