@@ -23,7 +23,7 @@ main = do
   printEvent "[START] Search"
   createQueriesTable bq conn
   createResultsTable bq conn
-  searchResultCount <- recursiveInstasearch bq conn (view filterConfig config, view searchConfig config)
+  searchResultCount <- recursiveInstasearch bq conn (view searchConfig config)
   printStats $ show searchResultCount ++ " search results recorded"
   printEvent "[END] Search"
   -- get results from database

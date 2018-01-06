@@ -9,43 +9,25 @@ import Config
 import Control.Concurrent
 import Control.Lens
 import Control.Monad.Catch (catch)
-import Control.Monad.Reader
 import Data.Aeson (eitherDecode)
 import Data.ByteString.Lazy (ByteString)
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
 import Data.Text (pack)
 import Database.SQLite.Simple (Connection)
-import Filter
 import Model
 import Network.HTTP.Client (HttpException)
 import Network.Wreq
 import Storage
 
-recursiveInstasearch :: Query -> Connection -> (FilterConfig, SearchConfig) -> IO Int
-recursiveInstasearch q conn cfg@(fcfg, scfg) = do
-  curResultCount <- recursiveInstasearch' q conn scfg
-  -- get current count
-  curResults <- selectUniqueResults q conn
-  curFilteredResults <- liftIO $ filterResults q (filter (matches q) (fmap snd curResults)) fcfg
-  let curFilteredResultCount = length $ concatMap _results curFilteredResults
-  printStats $ show curFilteredResultCount ++ " filtered results"
-  -- recurse if there's more to find
-  if curResultCount == 0
-    then pure curResultCount
-    else do
-      nextResultCount <- recursiveInstasearch q conn cfg
-      pure $ curResultCount + nextResultCount
-
-recursiveInstasearch' :: Query -> Connection -> SearchConfig -> IO Int
-recursiveInstasearch' q@(Query _ e _) conn cfg@(SearchConfig mql _ _) =
+recursiveInstasearch :: Query -> Connection -> SearchConfig -> IO Int
+recursiveInstasearch q@(Query _ e _) conn cfg@(SearchConfig mql _ _) =
   if length e <= mql 
     then do 
       print $ show q
       results <- traverse (\eq -> instasearchWithRetry eq conn cfg) (expandQuery q)
       let newQueries = findExpandables results
-      let resultCount = sum $ fmap (length . snd) results
-      recResults <- traverse (\nq -> recursiveInstasearch' nq conn cfg) newQueries
-      pure $ resultCount + sum recResults
+      recResults <- traverse (\nq -> recursiveInstasearch nq conn cfg) newQueries
+      pure $ sum (fmap (length . snd) results) + sum recResults
     else pure 0
 
 instasearchWithRetry :: Query -> Connection -> SearchConfig -> IO (Query, [String])
