@@ -15,14 +15,15 @@ main = do
   -- configure
   let bq = fromString $ head args
   configStr <- readFile "config.ini"
-  let config = case runConfigParser configStr of
-        Right cfg -> cfg
-        Left str -> error str
+  let config = 
+        case runConfigParser configStr of
+          Right cfg -> cfg
+          Left str -> error str
   conn <- open $ view databasePath config
-  -- search
-  printEvent "[START] Search"
   createQueriesTable bq conn
   createResultsTable bq conn
+  -- search
+  printEvent "[START] Search"
   searchResultCount <- recursiveInstasearch bq conn (view searchConfig config)
   printStats $ show searchResultCount ++ " search results recorded"
   printEvent "[END] Search"
