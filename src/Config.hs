@@ -27,7 +27,7 @@ data Config = Config
   }
 
 data SearchConfig = SearchConfig  
-  { _maxQueryLength :: Int
+  { _maxExpansionLength :: Int
   , _instasearchDelay :: Int
   , _retryDelay :: Int
   }
@@ -53,10 +53,10 @@ configParser = do
   dbPath <- section "DATABASE" $ do
     fieldOf "connectionString" string
   searchCfg <- section "SEARCH" $ do
-    mql <- fieldOf "maxQueryLength" number
+    mel <- fieldOf "maxExpansionLength" number
     isd <- fieldOf "instasearchDelay" number
     rd <- fieldOf "retryDelay" number
-    pure $ SearchConfig mql isd rd
+    pure $ SearchConfig mel isd rd
   filterCfg <- section "FILTER" $ do
     sws <- fieldOf "scowlWordSets" (listWithSeparator "," string)
     pure $ FilterConfig sws
