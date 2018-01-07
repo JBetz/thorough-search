@@ -147,7 +147,7 @@ writeWordsToFile filePath ws cp = do
 
 outputFilePath :: Query -> Int -> String
 outputFilePath q count =
-  "./output/" ++ show_ q ++ "-" ++ show count ++ ".txt"
+  "./output/" ++ show_ q ++ "-" ++ sizeMessage count ++ ".txt"
 
 cumulativePercentages :: [Int] -> [Int]
 cumulativePercentages counts =
@@ -155,6 +155,14 @@ cumulativePercentages counts =
       total = last runningCounts
       floatDiv = (/) `on` fromIntegral :: Int -> Int -> Float
   in fmap (\rc -> round $ (rc * 100) `floatDiv` total) runningCounts
+
+sizeMessage :: Int -> String
+sizeMessage count 
+  | count <= 5000  = "<<10K"
+  | count <= 10000 = "<10K"
+  | count <= 20000 = "<20K"
+  | count <= 30000 = "<30K"
+  | otherwise      = ">30K-WARNING"
 
 -- EMAIL
 emailResults :: FilePath -> IO ()
