@@ -70,7 +70,7 @@ createResultsTable q conn = do
     (fromString $
       "CREATE TABLE IF NOT EXISTS " ++
       show_ q ++
-      "_results (id INTEGER PRIMARY KEY, query TEXT, result TEXT, CONSTRAINT UC_results UNIQUE (query, result))")
+      "_results (id INTEGER PRIMARY KEY, query TEXT, result TEXT UNIQUE)")
 
 insertResultList :: (Query, [String]) -> Connection -> IO Int
 insertResultList (q, results) conn = do
