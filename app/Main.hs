@@ -12,31 +12,32 @@ import System.Environment (getArgs)
 main :: IO ()
 main = do
   args <- getArgs
-  -- read command line arguments
+  -- configure
   let bq = fromString $ head args
   configStr <- readFile "config.ini"
   let config = case runConfigParser configStr of
         Right cfg -> cfg
         Left str -> error str
   conn <- open $ view databasePath config
-  -- run search
+  -- search
   printEvent "[START] Search"
   createQueriesTable bq conn
   createResultsTable bq conn
   searchResultCount <- recursiveInstasearch bq conn (view searchConfig config)
   printStats $ show searchResultCount ++ " search results recorded"
   printEvent "[END] Search"
-  -- get results from database
+  -- filter
   printEvent "[START] Filter" 
   resultPairs <- selectUniqueResults bq conn
   let results = fmap snd resultPairs
   let matchingResults = filter (matches bq) results
+  filteredResults <- filterResults bq matchingResults (view filterConfig config)
   close conn
   printStats $ show (length results) ++ " total results"
   printStats $ show (length matchingResults) ++ " matching results"
-  -- filter and record results
-  filteredResults <- filterResults bq matchingResults (view filterConfig config)
   printStats $ show (length $ concatMap _results filteredResults) ++ " filtered results"
-  _ <- writeFilteredWordsToFile bq filteredResults
-  -- _ <- emailResults outputFile
   printEvent "[END] Filter"
+  -- record
+  printEvent "[START] Record"
+  _ <- writeFilteredWordsToFile bq filteredResults
+  printEvent "[START] Record"
