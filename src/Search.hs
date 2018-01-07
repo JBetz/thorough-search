@@ -25,8 +25,8 @@ recursiveInstasearch q@(Query _ e _) conn cfg@(SearchConfig mel _ _) =
     then do 
       print $ show q
       results <- traverse (\eq -> instasearchWithRetry eq conn cfg) (expandQuery q)
-      recResults <- traverse (\nq -> recursiveInstasearch nq conn cfg) (findExpandables results)
-      pure $ sum (fmap snd results) + sum recResults
+      recResultCounts <- traverse (\nq -> recursiveInstasearch nq conn cfg) (findExpandables results)
+      pure $ sum (fmap snd results) + sum recResultCounts
     else pure 0
 
 instasearchWithRetry :: Query -> Connection -> SearchConfig -> IO (Query, Int)
