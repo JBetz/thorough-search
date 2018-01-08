@@ -39,9 +39,6 @@ data ResultsRow =
   ResultsRow Int Text Text
   deriving (Show)
 
---instance FromRow Int where
---  fromRow = field
-
 instance FromRow ResultsRow where
   fromRow = ResultsRow <$> field <*> field <*> field
 
@@ -143,7 +140,7 @@ writeWordsToFile filePath ws cp = do
     word <- sort ws
     pure $ appendFile filePath (filter isAscii word ++ "\n")
   let separators = take 20 (repeat '=')
-  appendFile filePath $ "\n" ++ separators ++ " " ++ show cp ++ "% " ++ separators ++ "\n"
+  appendFile filePath $ "\n" ++ separators ++ " " ++ show cp ++ "% " ++ separators ++ "\n\n"
 
 outputFilePath :: Query -> Int -> String
 outputFilePath q count =
@@ -158,11 +155,10 @@ cumulativePercentages counts =
 
 sizeMessage :: Int -> String
 sizeMessage count 
-  | count <= 5000  = "<<10K"
-  | count <= 10000 = "<10K"
-  | count <= 20000 = "<20K"
-  | count <= 30000 = "<30K"
-  | otherwise      = ">30K-WARNING"
+  | count < 10000 = "under10K"
+  | count < 20000 = "under20K"
+  | count < 30000 = "under30K"
+  | otherwise     = "over30K-WARNING"
 
 -- EMAIL
 emailResults :: FilePath -> IO ()
