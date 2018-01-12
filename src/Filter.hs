@@ -2,7 +2,7 @@
 
 module Filter
   ( filterResults
-  , findExceptionalResults
+  , filterExceptionalResults
   , fromInt
   , Size(..)
   , FilteredResultSet(..)
@@ -47,9 +47,8 @@ runFilter (Query _ _ s) (unsorted, sorted) wordList =
         pure result
   in FilteredResultSet (_size wordList) filteredResults
 
--- FINDERS
-findExceptionalResults :: Query -> Bool -> [(String, String)] -> [FilteredResultSet] -> [String]
-findExceptionalResults bq@(Query _ _ s) matching allResults frs =
+filterExceptionalResults :: Query -> Bool -> [(String, String)] -> [FilteredResultSet] -> [String]
+filterExceptionalResults bq@(Query _ _ s) matching allResults frs =
   let filteredResults = concatMap _results frs
   in snd <$>
       filter
@@ -61,7 +60,7 @@ findExceptionalResults bq@(Query _ _ s) matching allResults frs =
         )
         allResults
 
--- DATASOURCE
+-- SCOWL WORD LISTS
 data WordList = WordList
  { _size :: Size 
  , _words :: Set String
