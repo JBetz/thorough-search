@@ -37,7 +37,7 @@ library
                      , zip
   default-language:    Haskell2010
 
-executable search
+executable ts
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
