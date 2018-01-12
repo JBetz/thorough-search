@@ -6,7 +6,6 @@ module Search
   ) where
 
 import Config
-import Control.Concurrent
 import Control.Lens
 import Control.Monad.Catch (catch)
 import Data.Aeson (eitherDecode)
@@ -73,7 +72,3 @@ parseResponse response =
   case eitherDecode response :: Either String (String, [String]) of
     Left _ -> []
     Right (_, vals) -> vals
-
-secondsThreadDelay :: Int -> IO ()
-secondsThreadDelay seconds = 
-  threadDelay $ seconds * 1000 * 1000

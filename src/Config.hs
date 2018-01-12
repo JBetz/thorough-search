@@ -13,8 +13,10 @@ module Config
   , printEvent
   , printStats
   , printInfo
+  , secondsThreadDelay
   ) where
-
+ 
+import Control.Concurrent (threadDelay)
 import Control.Lens.TH
 import Data.Ini.Config
 import Data.Text
@@ -68,7 +70,7 @@ configParser = do
     pure $ EmailConfig e f t h
   pure $ Config dbPath searchCfg filterCfg emailCfg
 
--- LOGGING
+-- SYSTEM
 printEvent :: String -> IO ()
 printEvent str =
   putStrLn $ "\n" ++ str ++ "\n"
@@ -80,3 +82,7 @@ printStats str =
 printInfo :: String -> IO ()
 printInfo str =
   putStrLn str
+
+secondsThreadDelay :: Int -> IO ()
+secondsThreadDelay seconds = 
+  threadDelay $ seconds * 1000 * 1000
