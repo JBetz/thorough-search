@@ -127,12 +127,12 @@ writeFilteredWordsToFile :: Query -> [FilteredResultSet] -> IO [()]
 writeFilteredWordsToFile q frs = do
   _ <- createDirectoryIfMissing False ("./output/" ++ show_ q)
   let counts = fmap (length . _results) frs
-  traverse (writeFilteredResultSetToFile q) (zip (cumulativePercentages counts) frs)
+  let filePath = outputFilePath q (sum counts)
+  traverse (writeFilteredResultSetToFile filePath q) (zip (cumulativePercentages counts) frs)
 
-writeFilteredResultSetToFile :: Query -> (Int, FilteredResultSet) -> IO ()
-writeFilteredResultSetToFile q (cp, (FilteredResultSet _ ws)) =
-  let filePath = outputFilePath q (length ws)
-  in writeWordsToFile filePath ws cp
+writeFilteredResultSetToFile :: FilePath -> Query -> (Int, FilteredResultSet) -> IO ()
+writeFilteredResultSetToFile fp q (cp, (FilteredResultSet _ ws)) =
+  writeWordsToFile fp ws cp
 
 writeWordsToFile :: String -> [String] -> Int -> IO ()
 writeWordsToFile filePath ws cp = do
