@@ -124,12 +124,13 @@ selectQueryResultCount q@(Query _ e _) conn = do
 
 -- FILE 
 writeFilteredWordsToFile :: Query -> [FilteredResultSet] -> IO [()]
-writeFilteredWordsToFile q frs = do
-  _ <- createDirectoryIfMissing False ("./output/" ++ show_ q)
+writeFilteredWordsToFile q frs = 
   let results = fmap _results frs
-  let counts = fmap length results
-  let filePath = outputFilePath q (sum counts)
-  traverse (writeWordsToFile filePath) (zip (cumulativePercentages counts) results)
+      counts = fmap length results
+      filePath = outputFilePath q (sum counts)
+  in do
+    _ <- createDirectoryIfMissing False ("./output/" ++ show_ q)
+    traverse (writeWordsToFile filePath) (zip (cumulativePercentages counts) results)
 
 writeWordsToFile :: String -> (Int, [String]) -> IO ()
 writeWordsToFile filePath (cp, ws) = do
