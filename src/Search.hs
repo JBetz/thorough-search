@@ -11,7 +11,6 @@ import Control.Lens
 import Control.Monad.Catch (catch)
 import Data.Aeson (eitherDecode)
 import Data.ByteString.Lazy (ByteString)
-import Data.Foldable (traverse_)
 import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
 import Data.Text (pack)
 import Database.SQLite.Simple (Connection)
