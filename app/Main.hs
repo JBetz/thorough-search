@@ -2,7 +2,7 @@ module Main where
 
 import Config
 import Control.Lens
-import Database.SQLite.Simple (close, open)
+import Database.SQLite.Simple (open, close)
 import Filter
 import Model
 import Search
@@ -24,7 +24,7 @@ main = do
   createResultsTable bq conn
   -- search
   printEvent "[START] Search"
-  searchResultCount <- recursiveInstasearch bq conn (view searchConfig config)
+  searchResultCount <- thoroughSearch bq conn 1 (view searchConfig config)
   printStats $ show searchResultCount ++ " search results recorded"
   printEvent "[END] Search"
   -- filter
@@ -41,4 +41,4 @@ main = do
   -- record
   printEvent "[START] Record"
   _ <- writeFilteredWordsToFile bq filteredResults
-  printEvent "[START] Record"
+  printEvent "[END] Record"

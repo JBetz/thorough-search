@@ -13,6 +13,7 @@ module Config
   , printEvent
   , printStats
   , printInfo
+  , msThreadDelay
   , secondsThreadDelay
   ) where
  
@@ -29,7 +30,7 @@ data Config = Config
   }
 
 data SearchConfig = SearchConfig  
-  { _maxExpansionLength :: Int
+  { _maxRuntime :: Int
   , _instasearchDelay :: Int
   , _retryDelay :: Int
   }
@@ -55,10 +56,10 @@ configParser = do
   dbPath <- section "DATABASE" $ do
     fieldOf "connectionString" string
   searchCfg <- section "SEARCH" $ do
-    mel <- fieldOf "maxExpansionLength" number
+    mr <- fieldOf "maxRuntime" number
     isd <- fieldOf "instasearchDelay" number
     rd <- fieldOf "retryDelay" number
-    pure $ SearchConfig mel isd rd
+    pure $ SearchConfig mr isd rd
   filterCfg <- section "FILTER" $ do
     sws <- fieldOf "scowlWordSets" (listWithSeparator "," string)
     pure $ FilterConfig sws
@@ -82,6 +83,10 @@ printStats str =
 printInfo :: String -> IO ()
 printInfo str =
   putStrLn str
+
+msThreadDelay :: Int -> IO ()
+msThreadDelay ms = 
+  threadDelay $ ms * 1000
 
 secondsThreadDelay :: Int -> IO ()
 secondsThreadDelay seconds = 

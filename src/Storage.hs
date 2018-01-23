@@ -18,6 +18,7 @@ module Storage
   ) where
 
 import Data.Char (isAscii)
+import Data.Foldable (traverse_)
 import Data.Function (on)
 import Data.List (sort)
 import Data.Map (assocs, fromList)
@@ -69,11 +70,10 @@ createResultsTable q conn = do
       show_ q ++
       "_results (id INTEGER PRIMARY KEY, query TEXT, result TEXT UNIQUE)")
 
-insertResultList :: (Query, [String]) -> Connection -> IO Int
+insertResultList :: (Query, [String]) -> Connection -> IO ()
 insertResultList (q, results) conn = do
-  _ <- insertQuery q (length results) conn
-  rs <- traverse (\r -> insertResult q r conn) results 
-  pure $ length rs
+  insertQuery q (length results) conn
+  traverse_ (\r -> insertResult q r conn) results 
 
 insertQuery :: Query -> Int -> Connection -> IO ()
 insertQuery q@(Query b e s) resultCount conn =
