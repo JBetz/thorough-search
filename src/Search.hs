@@ -22,7 +22,7 @@ import Storage
 thoroughSearch :: Query -> Connection -> Int -> SearchConfig -> IO Int 
 thoroughSearch q conn mel cfg@(SearchConfig rt _ _) = do 
   queryCount <- expansiveInstasearch q conn mel cfg
-  if queryCount < rt * 60 * 60
+  if queryCount < rt * 1000
     then thoroughSearch q conn (mel + 1) cfg
     else pure queryCount
 
