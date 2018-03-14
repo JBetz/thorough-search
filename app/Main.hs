@@ -25,13 +25,13 @@ main = do
   -- search
   printEvent "SEARCH"
   searchResultCount <- thoroughSearch bq conn 1 (view searchConfig config)
-  printStats $ show searchResultCount ++ " search results recorded"
+  printStats $ show searchResultCount ++ " total results"
   -- filter
   printEvent "FILTER" 
   results <- allResults bq conn
   filteredResults <- F.filter bq results (view filterConfig config)
   close conn
-  printStats $ show (length results) ++ " total results"
+  printStats $ show (length results) ++ " unique results"
   printStats $ show (length filteredResults) ++ " filtered results"
   -- sort 
   printEvent "SORT"
