@@ -3,7 +3,7 @@ module Main where
 import Config
 import Control.Lens
 import Database.SQLite.Simple (open, close)
-import Filter
+import Filter as F
 import Model
 import Search
 import Storage
@@ -23,22 +23,20 @@ main = do
   createQueriesTable bq conn
   createResultsTable bq conn
   -- search
-  printEvent "[START] Search"
+  printEvent "SEARCH"
   searchResultCount <- thoroughSearch bq conn 1 (view searchConfig config)
   printStats $ show searchResultCount ++ " search results recorded"
-  printEvent "[END] Search"
   -- filter
-  printEvent "[START] Filter" 
-  resultPairs <- selectUniqueResults bq conn
-  let results = fmap snd resultPairs
-  let matchingResults = filter (matches bq) results
-  filteredResults <- filterResults bq matchingResults (view filterConfig config)
+  printEvent "FILTER" 
+  results <- allResults bq conn
+  filteredResults <- F.filter bq results (view filterConfig config)
   close conn
   printStats $ show (length results) ++ " total results"
-  printStats $ show (length matchingResults) ++ " matching results"
-  printStats $ show (length $ concatMap _results filteredResults) ++ " filtered results"
-  printEvent "[END] Filter"
+  printStats $ show (length filteredResults) ++ " filtered results"
+  -- sort 
+  printEvent "SORT"
+  let sortedResults = F.sort filteredResults
   -- record
-  printEvent "[START] Record"
-  _ <- writeFilteredWordsToFile bq filteredResults
-  printEvent "[END] Record"
+  printEvent "RECORD"
+  _ <- record bq sortedResults
+  pure ()

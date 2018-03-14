@@ -9,11 +9,10 @@ module Storage
   , createQueriesTable
   , createResultsTable
   , insertResultList
-  , selectAllResults
-  , selectUniqueResults
+  , allResults
   , selectQueryResultCount
   , ranQuery
-  , writeFilteredWordsToFile
+  , record
   , emailResults
   ) where
 
@@ -26,7 +25,7 @@ import Data.String (fromString)
 import Data.Text (Text, unpack)
 import Data.Tuple (swap)
 import Database.SQLite.Simple as SQL hiding (Query)
-import Filter
+import Filter hiding (filter, sort)
 import Model hiding (fromString)
 import Network.Mail.SMTP
 import System.Directory (createDirectoryIfMissing)
@@ -93,16 +92,13 @@ insertResult q result conn =
       show_ q ++ "_results (query, result) VALUES (?, ?)")
     [show q, result]
 
-selectUniqueResults :: Query -> Connection -> IO [(String, String)]
-selectUniqueResults q conn = do
-  totalResults <- selectAllResults q conn
-  let resultPairs = fmap (\(ResultsRow _ eq v) -> (unpack eq, unpack v)) totalResults
-  let resultMap = fromList $ fmap swap resultPairs
-  pure $ fmap swap (assocs resultMap)
-
-selectAllResults :: Query -> Connection -> IO [ResultsRow]
-selectAllResults q conn =
-  query_ conn (fromString $ "SELECT * FROM " ++ show_ q ++ "_results")
+allResults :: Query -> Connection -> IO [Result]
+allResults baseQuery conn = do
+  totalResults <- query_ conn (fromString $ "SELECT * FROM " ++ show_ baseQuery ++ "_results")
+  let resultPairs = fmap (\(ResultsRow _ eq r) -> (unpack eq, unpack r)) totalResults
+      resultMap = fromList $ fmap swap resultPairs
+      uniqueResults = filter (\r -> matches baseQuery (snd r)) (fmap swap (assocs resultMap))
+  pure $ fmap (\(q, r) -> Result q r) uniqueResults
 
 ranQuery :: Query -> Connection -> IO Bool
 ranQuery q@(Query _ e _) conn = do
@@ -123,20 +119,19 @@ selectQueryResultCount q@(Query _ e _) conn = do
   pure $ (fromOnly . head) res
 
 -- FILE 
-writeFilteredWordsToFile :: Query -> [FilteredResultSet] -> IO [()]
-writeFilteredWordsToFile q frs = 
-  let results = fmap _results frs
-      counts = fmap length results
+record :: Query -> [[FilteredResult]] -> IO [()]
+record q frs = 
+  let counts = fmap length frs
       filePath = outputFilePath q (sum counts)
   in do
     _ <- createDirectoryIfMissing False ("./output/" ++ show_ q)
-    traverse (writeWordsToFile filePath) (zip (cumulativePercentages counts) results)
+    traverse (writeWordsToFile filePath) (zip (cumulativePercentages counts) frs)
 
-writeWordsToFile :: String -> (Int, [String]) -> IO ()
-writeWordsToFile filePath (cp, ws) = do
+writeWordsToFile :: String -> (Int, [FilteredResult]) -> IO ()
+writeWordsToFile filePath (cp, frs) = do
   sequence $ do
-    word <- sort ws
-    pure $ appendFile filePath (filter isAscii word ++ "\n")
+    (FilteredResult r _) <- sort frs
+    pure $ appendFile filePath (filter isAscii (_result r) ++ "\n")
   let separators = take 20 (repeat '=')
   appendFile filePath $ "\n" ++ separators ++ " " ++ show cp ++ "% " ++ separators ++ "\n\n"
 
