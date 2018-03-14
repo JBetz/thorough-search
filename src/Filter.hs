@@ -97,7 +97,7 @@ loadWordLists names = traverse (`loadWordList` names) (enumFromTo S10 S95)
 
 loadWordList :: Size -> [String] -> IO WordList
 loadWordList size names = do
-  let fileNames = fmap (\n -> "./ext/scowl/final/" ++ n ++ "." ++ show (toInt size)) names
+  let fileNames = fmap (\n -> "./scowl/" ++ n ++ "." ++ show (toInt size)) names
   fileContents <- traverse readFile fileNames
   pure $ WordList size (join (fmap lines fileContents))
 
