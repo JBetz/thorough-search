@@ -5,22 +5,22 @@ module Search
   , thoroughSearch
   ) where
 
-import Config
-import Control.Concurrent (forkIO)
-import Control.Lens
-import Control.Monad.Catch (catch)
-import Data.Aeson (eitherDecode)
-import Data.ByteString.Lazy (ByteString)
-import Data.List (isPrefixOf, isSuffixOf, isInfixOf)
-import Data.Text (pack)
-import Database.SQLite.Simple (Connection)
-import Model
-import Network.HTTP.Client (HttpException)
-import Network.Wreq
-import Storage
+import           Config
+import           Control.Concurrent     (forkIO)
+import           Control.Lens
+import           Control.Monad.Catch    (catch)
+import           Data.Aeson             (eitherDecode)
+import           Data.ByteString.Lazy   (ByteString)
+import           Data.List              (isInfixOf, isPrefixOf, isSuffixOf)
+import           Data.Text              (pack)
+import           Database.SQLite.Simple (Connection)
+import           Model
+import           Network.HTTP.Client    (HttpException)
+import           Network.Wreq
+import           Storage
 
-thoroughSearch :: Query -> Connection -> Int -> SearchConfig -> IO Int 
-thoroughSearch q conn mel cfg@(SearchConfig rt _ _) = do 
+thoroughSearch :: Query -> Connection -> Int -> SearchConfig -> IO Int
+thoroughSearch q conn mel cfg@(SearchConfig rt _ _) = do
   queryCount <- expansiveInstasearch q conn mel cfg
   if queryCount < rt * 1000
     then thoroughSearch q conn (mel + 1) cfg
@@ -28,8 +28,8 @@ thoroughSearch q conn mel cfg@(SearchConfig rt _ _) = do
 
 expansiveInstasearch :: Query -> Connection -> Int -> SearchConfig -> IO Int
 expansiveInstasearch q@(Query _ e _) conn mel cfg =
-  if length e <= mel 
-    then do 
+  if length e <= mel
+    then do
       results <- traverse (\eq -> instasearchWithRetry eq conn cfg) (expandQuery q)
       recResultCounts <- traverse (\nq -> expansiveInstasearch nq conn mel cfg) (findExpandables results)
       pure $ length results + sum recResultCounts
@@ -48,24 +48,24 @@ instasearchWithCache :: Query -> Connection -> SearchConfig -> IO (Query, Int)
 instasearchWithCache q conn (SearchConfig _ isd _) = do
   alreadyRan <- ranQuery q conn
   if alreadyRan
-    then do 
+    then do
       resultCount <- selectQueryResultCount q conn
       pure (q, resultCount)
     else do
       msThreadDelay isd
       results <- instasearch q
-      forkIO $ insertResultList (q, results) conn
+      _ <- forkIO $ insertResultList (q, results) conn
       pure (q, length results)
 
 instasearch :: Query -> IO [String]
 instasearch q = do
   print $ show q
-  let opts = defaults & param "q" .~ [pack $ show q] & param "client" .~ ["firefox"]
-  response <- getWith opts "https://www.google.com/complete/search" 
+  let opts = defaults & param "q" .~ [pack $ show q] & param "client" .~ ["firefox"] & param "hl" .~ ["en"]
+  response <- getWith opts "https://www.google.com/complete/search"
   pure $ parseResponse (response ^. responseBody)
 
 expandQuery :: Query -> [Query]
-expandQuery (Query b e s)  = 
+expandQuery (Query b e s)  =
   let expandWith char = Query b (e ++ [char]) s
       invalid q = "  " `isPrefixOf` sq || "  " `isSuffixOf` sq || "   " `isInfixOf` sq || head sq == ' '
         where sq = show q
@@ -78,5 +78,5 @@ findExpandables queries =
 parseResponse :: ByteString -> [String]
 parseResponse response =
   case eitherDecode response :: Either String (String, [String]) of
-    Left _ -> []
+    Left _          -> []
     Right (_, vals) -> vals
