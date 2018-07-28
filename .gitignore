@@ -2,3 +2,7 @@
 stack.yaml
 output
 config.ini
+scowl
+.ghci
+ghcid-output.txt
+
