@@ -1,8 +1,8 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module Storage
   ( ResultsRow(..)
@@ -16,19 +16,19 @@ module Storage
   , emailResults
   ) where
 
-import Data.Char (isAscii)
-import Data.Foldable (traverse_)
-import Data.Function (on)
-import Data.List (sort)
-import Data.Map (assocs, fromList)
-import Data.String (fromString)
-import Data.Text (Text, unpack)
-import Data.Tuple (swap)
-import Database.SQLite.Simple as SQL hiding (Query)
-import Filter hiding (filter, sort)
-import Model hiding (fromString)
-import Network.Mail.SMTP
-import System.Directory (createDirectoryIfMissing)
+import           Data.Char              (isAscii)
+import           Data.Foldable          (traverse_)
+import           Data.Function          (on)
+import           Data.List              (sort)
+import           Data.Map               (assocs, fromList)
+import           Data.String            (fromString)
+import           Data.Text              (Text, unpack)
+import           Data.Tuple             (swap)
+import           Database.SQLite.Simple as SQL hiding (Query)
+import           Filter                 hiding (filter, sort)
+import           Model                  hiding (fromString)
+import           Network.Mail.SMTP
+import           System.Directory       (createDirectoryIfMissing)
 
 -- DATABASE
 data QueriesRow =
@@ -72,7 +72,7 @@ createResultsTable q conn = do
 insertResultList :: (Query, [String]) -> Connection -> IO ()
 insertResultList (q, results) conn = do
   insertQuery q (length results) conn
-  traverse_ (\r -> insertResult q r conn) results 
+  traverse_ (\r -> insertResult q r conn) results
 
 insertQuery :: Query -> Int -> Connection -> IO ()
 insertQuery q@(Query b e s) resultCount conn =
@@ -84,13 +84,13 @@ insertQuery q@(Query b e s) resultCount conn =
     (toRow (show s, b, e, resultCount))
 
 insertResult :: Query -> String -> Connection -> IO ()
-insertResult q result conn =
+insertResult q res conn =
   execute
     conn
     (fromString $
       "INSERT OR IGNORE INTO " ++
       show_ q ++ "_results (query, result) VALUES (?, ?)")
-    [show q, result]
+    [show q, res]
 
 allResults :: Query -> Connection -> IO [Result]
 allResults baseQuery conn = do
@@ -118,9 +118,9 @@ selectQueryResultCount q@(Query _ e _) conn = do
       [e] :: IO [Only Int]
   pure $ (fromOnly . head) res
 
--- FILE 
+-- FILE
 record :: Query -> [[FilteredResult]] -> IO [()]
-record q frs = 
+record q frs =
   let counts = fmap length frs
       filePath = outputFilePath q (sum counts)
   in do
@@ -129,9 +129,9 @@ record q frs =
 
 writeWordsToFile :: String -> (Int, [FilteredResult]) -> IO ()
 writeWordsToFile filePath (cp, frs) = do
-  sequence $ do
+  _ <- sequence $ do
     (FilteredResult r _) <- sort frs
-    pure $ appendFile filePath (filter isAscii (_result r) ++ "\n")
+    pure $ appendFile filePath (filter isAscii (result r) ++ "\n")
   let separators = take 20 (repeat '=')
   appendFile filePath $ "\n" ++ separators ++ " " ++ show cp ++ "% " ++ separators ++ "\n\n"
 
@@ -147,7 +147,7 @@ cumulativePercentages counts =
   in fmap (\rc -> round $ (rc * 100) `floatDiv` total) runningCounts
 
 sizeMessage :: Int -> String
-sizeMessage count 
+sizeMessage count
   | count < 10000 = "under10K"
   | count < 20000 = "under20K"
   | count < 30000 = "under30K"
@@ -155,7 +155,7 @@ sizeMessage count
 
 -- EMAIL
 emailResults :: FilePath -> IO ()
-emailResults fp = 
+emailResults fp =
   let from       = Address Nothing ""
       to         = [Address (Just "Jason Hickner") ""]
       cc         = []
