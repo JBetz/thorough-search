@@ -1,9 +1,11 @@
 module Main where
 
+import           Prelude                hiding (filter)
+
 import           Config
 import           Control.Monad.Reader
 import           Database.SQLite.Simple (close, open)
-import           Filter                 as F
+import           Filter
 import           Model
 import           Search
 import           Storage
@@ -32,16 +34,16 @@ main = do
   -- filter
   printEvent "FILTER"
   results <- allResults bq conn
-  filteredResults <- runReaderT (F.filter bq results) (filterConfig config)
+  filteredResults <- runReaderT (filter bq results) (filterConfig config)
   close conn
   printStats $ show (length results) ++ " unique results"
   printStats $ show (length filteredResults) ++ " filtered results"
 
   -- sort
   printEvent "SORT"
-  let sortedResults = F.sort filteredResults
+  let sortedResults = sort filteredResults
 
   -- record
   printEvent "RECORD"
-  _ <- record bq sortedResults
+  _ <- commit bq sortedResults
   pure ()

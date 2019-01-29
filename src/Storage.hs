@@ -12,7 +12,7 @@ module Storage
   , allResults
   , selectQueryResultCount
   , ranQuery
-  , record
+  , commit
   , emailResults
   ) where
 
@@ -119,8 +119,8 @@ selectQueryResultCount q@(Query _ e _) conn = do
   pure $ (fromOnly . head) res
 
 -- FILE
-record :: Query -> [[FilteredResult]] -> IO [()]
-record q frs =
+commit :: Query -> [[FilteredResult]] -> IO [()]
+commit q frs =
   let counts = fmap length frs
       filePath = outputFilePath q (sum counts)
   in do
