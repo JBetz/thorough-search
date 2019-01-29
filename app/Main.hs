@@ -1,41 +1,47 @@
 module Main where
 
-import Config
-import Control.Lens
-import Database.SQLite.Simple (open, close)
-import Filter as F
-import Model
-import Search
-import Storage
-import System.Environment (getArgs)
+import           Config
+import           Control.Lens
+import           Control.Monad.Reader
+import           Database.SQLite.Simple (close, open)
+import           Filter                 as F
+import           Model
+import           Search
+import           Storage
+import           System.Environment     (getArgs)
 
 main :: IO ()
 main = do
-  args <- getArgs
+
   -- configure
+  args <- getArgs
   let bq = fromString $ head args
   configStr <- readFile "config.ini"
-  let config = 
+  let config =
         case runConfigParser configStr of
           Right cfg -> cfg
-          Left str -> error str
+          Left str  -> error str
   conn <- open $ view databasePath config
   createQueriesTable bq conn
   createResultsTable bq conn
+
   -- search
   printEvent "SEARCH"
-  searchResultCount <- thoroughSearch bq conn 1 (view searchConfig config)
+  searchResultCount <- runReaderT (thoroughSearch bq conn 1) (view searchConfig config)
   printStats $ show searchResultCount ++ " total results"
+
   -- filter
-  printEvent "FILTER" 
+  printEvent "FILTER"
   results <- allResults bq conn
-  filteredResults <- F.filter bq results (view filterConfig config)
+  filteredResults <- runReaderT (F.filter bq results) (view filterConfig config)
   close conn
   printStats $ show (length results) ++ " unique results"
   printStats $ show (length filteredResults) ++ " filtered results"
-  -- sort 
+
+  -- sort
   printEvent "SORT"
   let sortedResults = F.sort filteredResults
+
   -- record
   printEvent "RECORD"
   _ <- record bq sortedResults

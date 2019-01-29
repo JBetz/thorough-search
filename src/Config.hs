@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module Config
   ( Config(..)
@@ -16,33 +16,33 @@ module Config
   , msThreadDelay
   , secondsThreadDelay
   ) where
- 
-import Control.Concurrent (threadDelay)
-import Control.Lens.TH
-import Data.Ini.Config
-import Data.Text
+
+import           Control.Concurrent (threadDelay)
+import           Control.Lens.TH
+import           Data.Ini.Config
+import           Data.Text
 
 data Config = Config
   { _databasePath :: FilePath
   , _searchConfig :: SearchConfig
   , _filterConfig :: FilterConfig
-  , _emailConfig :: EmailConfig
+  , _emailConfig  :: EmailConfig
   }
 
-data SearchConfig = SearchConfig  
-  { _maxRuntime :: Int
+data SearchConfig = SearchConfig
+  { _maxRuntime       :: Int
   , _instasearchDelay :: Int
-  , _retryDelay :: Int
+  , _retryDelay       :: Int
   }
 
-data FilterConfig = FilterConfig 
+data FilterConfig = FilterConfig
   { _scowlWordSets :: [String] }
 
-data EmailConfig = EmailConfig   
+data EmailConfig = EmailConfig
   { _enable :: Bool
-  , _from :: Maybe String
-  , _to :: Maybe [String]
-  , _host :: Maybe String
+  , _from   :: Maybe String
+  , _to     :: Maybe [String]
+  , _host   :: Maybe String
   }
 
 makeLenses ''Config
@@ -63,7 +63,7 @@ configParser = do
   filterCfg <- section "FILTER" $ do
     sws <- fieldOf "scowlWordSets" (listWithSeparator "," string)
     pure $ FilterConfig sws
-  emailCfg <- section "EMAIL" $ do 
+  emailCfg <- section "EMAIL" $ do
     e <- fieldOf "enable" flag
     f <- fieldMbOf "from" string
     t <- fieldMbOf "to" (listWithSeparator "," string)
@@ -85,9 +85,9 @@ printInfo str =
   putStrLn str
 
 msThreadDelay :: Int -> IO ()
-msThreadDelay ms = 
+msThreadDelay ms =
   threadDelay $ ms * 1000
 
 secondsThreadDelay :: Int -> IO ()
-secondsThreadDelay seconds = 
+secondsThreadDelay seconds =
   threadDelay $ seconds * 1000 * 1000

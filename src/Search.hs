@@ -9,6 +9,7 @@ import           Config
 import           Control.Concurrent     (forkIO)
 import           Control.Lens
 import           Control.Monad.Catch    (catch)
+import           Control.Monad.Reader
 import           Data.Aeson             (eitherDecode)
 import           Data.ByteString.Lazy   (ByteString)
 import           Data.List              (isInfixOf, isPrefixOf, isSuffixOf)
@@ -19,42 +20,47 @@ import           Network.HTTP.Client    (HttpException)
 import           Network.Wreq
 import           Storage
 
-thoroughSearch :: Query -> Connection -> Int -> SearchConfig -> IO Int
-thoroughSearch q conn mel cfg@(SearchConfig rt _ _) = do
-  queryCount <- expansiveInstasearch q conn mel cfg
+type Search = ReaderT SearchConfig IO
+
+thoroughSearch :: Query -> Connection -> Int -> Search Int
+thoroughSearch q conn mel = do
+  rt <- asks _maxRuntime
+  queryCount <- expansiveInstasearch q conn mel
   if queryCount < rt * 1000
-    then thoroughSearch q conn (mel + 1) cfg
+    then thoroughSearch q conn (mel + 1)
     else pure queryCount
 
-expansiveInstasearch :: Query -> Connection -> Int -> SearchConfig -> IO Int
-expansiveInstasearch q@(Query _ e _) conn mel cfg =
+expansiveInstasearch :: Query -> Connection -> Int -> Search Int
+expansiveInstasearch q@(Query _ e _) conn mel =
   if length e <= mel
     then do
-      results <- traverse (\eq -> instasearchWithRetry eq conn cfg) (expandQuery q)
-      recResultCounts <- traverse (\nq -> expansiveInstasearch nq conn mel cfg) (findExpandables results)
+      results <- traverse (\eq -> instasearchWithRetry eq conn) (expandQuery q)
+      recResultCounts <- traverse (\nq -> expansiveInstasearch nq conn mel) (findExpandables results)
       pure $ length results + sum recResultCounts
     else pure 0
 
-instasearchWithRetry :: Query -> Connection -> SearchConfig -> IO (Query, Int)
-instasearchWithRetry q conn cfg@(SearchConfig _ _ rd) =
+instasearchWithRetry :: Query -> Connection -> Search (Query, Int)
+instasearchWithRetry q conn  = do
+  rd <- asks _retryDelay
   catch
-    (instasearchWithCache q conn cfg)
+    (instasearchWithCache q conn)
     (\e -> do
-       putStrLn $ show (e :: HttpException)
-       secondsThreadDelay rd
-       instasearchWithCache q conn cfg)
+       liftIO $ putStrLn $ show (e :: HttpException)
+       liftIO $ secondsThreadDelay rd
+       instasearchWithCache q conn)
 
-instasearchWithCache :: Query -> Connection -> SearchConfig -> IO (Query, Int)
-instasearchWithCache q conn (SearchConfig _ isd _) = do
-  alreadyRan <- ranQuery q conn
+instasearchWithCache :: Query -> Connection -> Search (Query, Int)
+instasearchWithCache q conn = do
+  isd <- asks _instasearchDelay
+  alreadyRan <- liftIO $ ranQuery q conn
   if alreadyRan
     then do
-      resultCount <- selectQueryResultCount q conn
+      resultCount <- liftIO $ selectQueryResultCount q conn
       pure (q, resultCount)
     else do
-      msThreadDelay isd
-      results <- instasearch q
-      _ <- forkIO $ insertResultList (q, results) conn
+      liftIO $ msThreadDelay isd
+      results <- liftIO $ instasearch q
+      _ <- liftIO $ forkIO $ insertResultList (q, results) conn
       pure (q, length results)
 
 instasearch :: Query -> IO [String]

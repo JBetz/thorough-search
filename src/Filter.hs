@@ -11,21 +11,20 @@ module Filter
 
 import           Config
 import           Control.Monad
-import           Data.List     (groupBy, sortBy, (\\))
-import qualified Data.Set      as S
+import           Control.Monad.Reader
+import           Data.List            (groupBy, sortBy, (\\))
+import qualified Data.Set             as S
 import           Model
-import           Prelude       hiding (filter)
+import           Prelude              hiding (filter)
 
--- FILTERS
+type Filter = ReaderT FilterConfig IO
+
 data Result = Result
   { query  :: String
   , result :: String
   }
 
 data FilteredResult = FilteredResult Result Size
-
-queryLength :: FilteredResult -> Int
-queryLength (FilteredResult r _) = length (query r)
 
 instance Eq Result where
   (==) a b = result a == result b
@@ -41,9 +40,10 @@ instance Ord FilteredResult where
   (<=) (FilteredResult r1 _) (FilteredResult r2 _) =
     result r1 <= result r2
 
-filter :: Query -> [Result] -> FilterConfig -> IO [FilteredResult]
-filter q results (FilterConfig sws) = do
-  wordLists <- loadWordLists sws
+filter :: Query -> [Result] -> Filter [FilteredResult]
+filter q results = do
+  sws <- asks _scowlWordSets
+  wordLists <- liftIO $ loadWordLists sws
   let accWordLists = accumulatedWordLists wordLists
   pure $ byScowlSet q results [] accWordLists
 
@@ -67,11 +67,6 @@ sort :: [FilteredResult] -> [[FilteredResult]]
 sort results =
   let sortedResults = sortBy (\(FilteredResult _ size1) (FilteredResult _ size2) -> compare size1 size2) results
   in groupBy (\(FilteredResult _ size1) (FilteredResult _ size2) -> size1 == size2) sortedResults
-
-sortByQueryLength :: [FilteredResult] -> [[FilteredResult]]
-sortByQueryLength results =
-  let sortedResults = sortBy (\r1 r2 -> compare (queryLength r1) (queryLength r2)) results
-  in groupBy (\r1 r2 -> queryLength r1 == queryLength r2) sortedResults
 
 -- SCOWL WORD LISTS
 data WordList = WordList
