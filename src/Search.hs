@@ -24,7 +24,7 @@ type Search = ReaderT SearchConfig IO
 
 thoroughSearch :: Query -> Connection -> Int -> Search Int
 thoroughSearch q conn mel = do
-  rt <- asks _maxRuntime
+  rt <- asks maxRuntime
   queryCount <- expansiveInstasearch q conn mel
   if queryCount < rt * 1000
     then thoroughSearch q conn (mel + 1)
@@ -41,7 +41,7 @@ expansiveInstasearch q@(Query _ e _) conn mel =
 
 instasearchWithRetry :: Query -> Connection -> Search (Query, Int)
 instasearchWithRetry q conn  = do
-  rd <- asks _retryDelay
+  rd <- asks retryDelay
   catch
     (instasearchWithCache q conn)
     (\e -> do
@@ -51,7 +51,7 @@ instasearchWithRetry q conn  = do
 
 instasearchWithCache :: Query -> Connection -> Search (Query, Int)
 instasearchWithCache q conn = do
-  isd <- asks _instasearchDelay
+  isd <- asks instasearchDelay
   alreadyRan <- liftIO $ ranQuery q conn
   if alreadyRan
     then do

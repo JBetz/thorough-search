@@ -42,7 +42,7 @@ instance Ord FilteredResult where
 
 filter :: Query -> [Result] -> Filter [FilteredResult]
 filter q results = do
-  sws <- asks _scowlWordSets
+  sws <- asks scowlWordSets
   wordLists <- liftIO $ loadWordLists sws
   let accWordLists = accumulatedWordLists wordLists
   pure $ byScowlSet q results [] accWordLists

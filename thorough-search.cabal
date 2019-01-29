@@ -27,7 +27,6 @@ library
                      , http-client
                      , mtl
                      , lens
-                     , lens-aeson
                      , path
                      , path-io
                      , smtp-mail

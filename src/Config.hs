@@ -5,10 +5,6 @@ module Config
   ( Config(..)
   , SearchConfig(..)
   , FilterConfig(..)
-  , databasePath
-  , searchConfig
-  , filterConfig
-  , emailConfig
   , runConfigParser
   , printEvent
   , printStats
@@ -18,34 +14,31 @@ module Config
   ) where
 
 import           Control.Concurrent (threadDelay)
-import           Control.Lens.TH
 import           Data.Ini.Config
 import           Data.Text
 
 data Config = Config
-  { _databasePath :: FilePath
-  , _searchConfig :: SearchConfig
-  , _filterConfig :: FilterConfig
-  , _emailConfig  :: EmailConfig
+  { databasePath :: FilePath
+  , searchConfig :: SearchConfig
+  , filterConfig :: FilterConfig
+  , emailConfig  :: EmailConfig
   }
 
 data SearchConfig = SearchConfig
-  { _maxRuntime       :: Int
-  , _instasearchDelay :: Int
-  , _retryDelay       :: Int
+  { maxRuntime       :: Int
+  , instasearchDelay :: Int
+  , retryDelay       :: Int
   }
 
 data FilterConfig = FilterConfig
-  { _scowlWordSets :: [String] }
+  { scowlWordSets :: [String] }
 
 data EmailConfig = EmailConfig
-  { _enable :: Bool
-  , _from   :: Maybe String
-  , _to     :: Maybe [String]
-  , _host   :: Maybe String
+  { enable :: Bool
+  , from   :: Maybe String
+  , to     :: Maybe [String]
+  , host   :: Maybe String
   }
-
-makeLenses ''Config
 
 runConfigParser :: String -> Either String Config
 runConfigParser str =
