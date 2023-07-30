@@ -20,17 +20,17 @@ import           Prelude              hiding (filter)
 type Filter = ReaderT FilterConfig IO
 
 data Result = Result
-  { query  :: String
-  , result :: String
+  { result_query  :: String
+  , result_value :: String
   }
 
 data FilteredResult = FilteredResult Result Size
 
 instance Eq Result where
-  (==) a b = result a == result b
+  (==) a b = result_value a == result_value b
 
 instance Ord Result where
-  (<=) a b = result a <= result b
+  (<=) a b = result_value a <= result_value b
 
 instance Eq FilteredResult where
   (==) (FilteredResult r1 _) (FilteredResult r2 _) =
@@ -42,7 +42,7 @@ instance Ord FilteredResult where
 
 filter :: Query -> [Result] -> Filter [FilteredResult]
 filter q results = do
-  sws <- asks scowlWordSets
+  sws <- asks filter_scowlWordSets
   wordLists <- liftIO $ loadWordLists sws
   let accWordLists = accumulatedWordLists wordLists
   pure $ byScowlSet q results [] accWordLists
@@ -58,7 +58,7 @@ byScowlSet q unfiltered filtered wordLists =
 runFilter :: Query -> [Result] -> WordList -> [FilteredResult]
 runFilter (Query _ _ s) unfiltered wordList = do
   res <- unfiltered
-  let resultDiff = S.fromList $ extractExpansion s (result res)
+  let resultDiff = S.fromList $ extractExpansion s (result_value res)
   guard $ null (resultDiff S.\\ _words wordList)
   pure $ FilteredResult res (_size wordList)
 
@@ -70,8 +70,8 @@ sort results =
 
 -- SCOWL WORD LISTS
 data WordList = WordList
- { _size  :: Size
- , _words :: S.Set String
+ { wordList_size  :: Size
+ , wordList_words :: S.Set String
  }
 
 data Size
@@ -108,4 +108,4 @@ accumulatedWordLists wordLists =
 
 combine :: [WordList] -> WordList
 combine wordLists =
-  WordList (_size $ last wordLists) (foldl (\a b -> a `S.union` _words b) S.empty wordLists)
+  WordList (wordList_size $ last wordLists) (foldl (\a b -> a `S.union` wordList_words b) S.empty wordLists)

@@ -28,13 +28,13 @@ main = do
 
   -- search
   printEvent "SEARCH"
-  searchResultCount <- runReaderT (thoroughSearch bq conn 1) (searchConfig config)
+  searchResultCount <- runReaderT (thoroughSearch bq conn 1) (config_search config)
   printStats $ show searchResultCount ++ " total results"
 
   -- filter
   printEvent "FILTER"
   results <- allResults bq conn
-  filteredResults <- runReaderT (filter bq results) (filterConfig config)
+  filteredResults <- runReaderT (filter bq results) (config_filter config)
   close conn
   printStats $ show (length results) ++ " unique results"
   printStats $ show (length filteredResults) ++ " filtered results"

@@ -4,7 +4,7 @@ module Model
   , matches
   , extractExpansion
   , fromString
-  , show_
+  , showFormattedQuery
   ) where
 
 import Data.List
@@ -27,8 +27,8 @@ instance Show Query where
       WordOfX -> b ++ " of " ++ e
       XWord -> e ++ " " ++ b
 
-show_ :: Query -> String
-show_ (Query b _ s) = 
+showFormattedQuery :: Query -> String
+showFormattedQuery (Query b _ s) = 
   case s of
     WordX -> b ++ "_X"
     WordOfX -> b ++ "_of_X"

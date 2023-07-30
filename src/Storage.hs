@@ -57,7 +57,7 @@ createQueriesTable q conn = do
     conn
     (fromString $
       "CREATE TABLE IF NOT EXISTS " ++
-      show_ q ++
+      showFormattedQuery q ++
       "_queries (id INTEGER PRIMARY KEY, structure TEXT, base TEXT, expansion TEXT UNIQUE, result_count INTEGER)")
 
 createResultsTable :: Query -> Connection -> IO ()
@@ -66,7 +66,7 @@ createResultsTable q conn = do
     conn
     (fromString $
       "CREATE TABLE IF NOT EXISTS " ++
-      show_ q ++
+      showFormattedQuery q ++
       "_results (id INTEGER PRIMARY KEY, query TEXT, result TEXT UNIQUE)")
 
 insertResultList :: (Query, [String]) -> Connection -> IO ()
@@ -80,7 +80,7 @@ insertQuery q@(Query b e s) resultCount conn =
     conn
     (fromString $
       "INSERT OR IGNORE INTO " ++
-      show_ q ++ "_queries (structure, base, expansion, result_count) VALUES (?, ?, ?, ?)")
+      showFormattedQuery q ++ "_queries (structure, base, expansion, result_count) VALUES (?, ?, ?, ?)")
     (toRow (show s, b, e, resultCount))
 
 insertResult :: Query -> String -> Connection -> IO ()
@@ -89,12 +89,12 @@ insertResult q res conn =
     conn
     (fromString $
       "INSERT OR IGNORE INTO " ++
-      show_ q ++ "_results (query, result) VALUES (?, ?)")
+      showFormattedQuery q ++ "_results (query, result) VALUES (?, ?)")
     [show q, res]
 
 allResults :: Query -> Connection -> IO [Result]
 allResults baseQuery conn = do
-  totalResults <- query_ conn (fromString $ "SELECT * FROM " ++ show_ baseQuery ++ "_results")
+  totalResults <- query_ conn (fromString $ "SELECT * FROM " ++ showFormattedQuery baseQuery ++ "_results")
   let resultPairs = fmap (\(ResultsRow _ eq r) -> (unpack eq, unpack r)) totalResults
       resultMap = fromList $ fmap swap resultPairs
       uniqueResults = filter (\r -> matches baseQuery (snd r)) (fmap swap (assocs resultMap))
@@ -105,7 +105,7 @@ ranQuery q@(Query _ e _) conn = do
   res <-
     SQL.query
       conn
-      (fromString $ "SELECT * FROM " ++ show_ q ++ "_queries WHERE expansion = ?")
+      (fromString $ "SELECT * FROM " ++ showFormattedQuery q ++ "_queries WHERE expansion = ?")
       [e] :: IO [QueriesRow]
   pure $ not (null res)
 
@@ -114,7 +114,7 @@ selectQueryResultCount q@(Query _ e _) conn = do
   res <-
     SQL.query
       conn
-      (fromString $ "SELECT result_count FROM " ++ show_ q ++ "_queries WHERE expansion = ?")
+      (fromString $ "SELECT result_count FROM " ++ showFormattedQuery q ++ "_queries WHERE expansion = ?")
       [e] :: IO [Only Int]
   pure $ (fromOnly . head) res
 
@@ -124,7 +124,7 @@ commit q frs =
   let counts = fmap length frs
       filePath = outputFilePath q (sum counts)
   in do
-    _ <- createDirectoryIfMissing False ("./output/" ++ show_ q)
+    _ <- createDirectoryIfMissing False ("./output/" ++ showFormattedQuery q)
     traverse (writeWordsToFile filePath) (zip (cumulativePercentages counts) frs)
 
 writeWordsToFile :: String -> (Int, [FilteredResult]) -> IO ()
@@ -137,7 +137,7 @@ writeWordsToFile filePath (cp, frs) = do
 
 outputFilePath :: Query -> Int -> String
 outputFilePath q count =
-  "./output/" ++ show_ q ++ "-" ++ sizeMessage count ++ ".txt"
+  "./output/" ++ showFormattedQuery q ++ "-" ++ sizeMessage count ++ ".txt"
 
 cumulativePercentages :: [Int] -> [Int]
 cumulativePercentages counts =
