@@ -84,6 +84,6 @@ findExpandables queries =
 
 parseResponse :: ByteString -> [String]
 parseResponse response =
-  case eitherDecode response :: Either String (String, [String]) of
+  case eitherDecode response :: Either String (String, [String], [String], ()) of
     Left _          -> []
-    Right (_, vals) -> vals
+    Right (_, vals, _, _) -> vals
