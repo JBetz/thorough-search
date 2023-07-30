@@ -18,26 +18,26 @@ import           Data.Ini.Config
 import           Data.Text
 
 data Config = Config
-  { databasePath :: FilePath
-  , searchConfig :: SearchConfig
-  , filterConfig :: FilterConfig
-  , emailConfig  :: EmailConfig
+  { config_databasePath :: FilePath
+  , config_search :: SearchConfig
+  , config_filter :: FilterConfig
+  , config_email :: EmailConfig
   }
 
 data SearchConfig = SearchConfig
-  { maxRuntime       :: Int
-  , instasearchDelay :: Int
-  , retryDelay       :: Int
+  { search_maxQueryCount :: Int
+  , search_instasearchDelay :: Int
+  , search_retryDelay :: Int
   }
 
 data FilterConfig = FilterConfig
-  { scowlWordSets :: [String] }
+  { filter_scowlWordSets :: [String] }
 
 data EmailConfig = EmailConfig
-  { enable :: Bool
-  , from   :: Maybe String
-  , to     :: Maybe [String]
-  , host   :: Maybe String
+  { email_enable :: Bool
+  , email_from :: Maybe String
+  , email_to :: Maybe [String]
+  , email_host :: Maybe String
   }
 
 runConfigParser :: String -> Either String Config
