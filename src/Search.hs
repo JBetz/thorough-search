@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Search
@@ -10,10 +11,12 @@ import           Control.Concurrent     (forkIO, threadDelay)
 import           Control.Lens
 import           Control.Monad.Catch    (catch)
 import           Control.Monad.Reader
-import           Data.Aeson             (eitherDecode)
+import           Data.Aeson             (Value(..), Array, eitherDecode)
 import           Data.ByteString.Lazy   (ByteString)
 import           Data.List              (isInfixOf, isPrefixOf, isSuffixOf)
-import           Data.Text              (pack)
+import           Data.Maybe             (fromMaybe, mapMaybe)
+import qualified Data.Text as Text
+import qualified Data.Vector as Vector
 import           Database.SQLite.Simple (Connection)
 import           Model
 import           Network.HTTP.Client    (HttpException)
@@ -66,7 +69,7 @@ instasearchWithCache q conn = do
 
 instasearch :: Query -> IO [String]
 instasearch q = do
-  let opts = defaults & param "q" .~ [pack $ show q] & param "client" .~ ["firefox"] & param "hl" .~ ["en"]
+  let opts = defaults & param "q" .~ [Text.pack $ show q] & param "client" .~ ["firefox"] & param "hl" .~ ["en"]
   response <- getWith opts "https://www.google.com/complete/search"
   pure $ parseResponse (response ^. responseBody)
 
@@ -83,9 +86,14 @@ findExpandables queries =
 
 parseResponse :: ByteString -> [String]
 parseResponse response =
-  case eitherDecode response :: Either String (String, [String], [String], ()) of
-    Left _          -> []
-    Right (_, vals, _, _) -> vals
+  case eitherDecode response :: Either String Value of
+    Left _ -> []
+    Right (Array vector) -> 
+      case vector Vector.!? 1 of
+        Just (Array results) -> mapMaybe (\case
+            String text -> Just $ Text.unpack text
+            _ -> Nothing ) (Vector.toList results)
+        _ -> []
 
 msThreadDelay :: Int -> IO ()
 msThreadDelay ms = threadDelay $ ms * 1000

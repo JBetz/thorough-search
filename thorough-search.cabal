@@ -31,6 +31,7 @@ library
                      , path-io
                      , sqlite-simple
                      , text
+                     , vector
                      , wreq
   default-language:    Haskell2010
 
