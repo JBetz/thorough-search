@@ -6,7 +6,7 @@ module Search
   ) where
 
 import           Config
-import           Control.Concurrent     (forkIO)
+import           Control.Concurrent     (forkIO, threadDelay)
 import           Control.Lens
 import           Control.Monad.Catch    (catch)
 import           Control.Monad.Reader
@@ -24,7 +24,7 @@ type Search = ReaderT SearchConfig IO
 
 thoroughSearch :: Query -> Connection -> Int -> Search Int
 thoroughSearch query conn maximumExpansionLength = do
-  maxQueryCount <- asks config_maxQueryCount
+  maxQueryCount <- asks search_maxQueryCount
   queryCount <- expansiveInstasearch query conn maximumExpansionLength
   if queryCount < maxQueryCount
     then thoroughSearch query conn (maximumExpansionLength + 1)
@@ -60,9 +60,8 @@ instasearchWithCache q conn = do
     else liftIO $ do
       msThreadDelay instasearchDelay
       results <- instasearch q
-      -- TODO: Why does this fork?
-      _ <- forkIO $ insertResultList (q, results) conn
-      print (q, length results)
+      _ <- insertResultList (q, results) conn
+      putStrLn $ show q <> " - " <> show (length results)
       pure (q, length results)
 
 instasearch :: Query -> IO [String]
@@ -87,3 +86,9 @@ parseResponse response =
   case eitherDecode response :: Either String (String, [String], [String], ()) of
     Left _          -> []
     Right (_, vals, _, _) -> vals
+
+msThreadDelay :: Int -> IO ()
+msThreadDelay ms = threadDelay $ ms * 1000
+
+secondsThreadDelay :: Int -> IO ()
+secondsThreadDelay seconds = threadDelay $ seconds * 1000 * 1000

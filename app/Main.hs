@@ -22,7 +22,7 @@ main = do
         case runConfigParser configStr of
           Right cfg -> cfg
           Left str  -> error str
-  conn <- open $ databasePath config
+  conn <- open $ config_databasePath config
   createQueriesTable bq conn
   createResultsTable bq conn
 
@@ -34,6 +34,7 @@ main = do
   -- filter
   printEvent "FILTER"
   results <- allResults bq conn
+  
   filteredResults <- runReaderT (filter bq results) (config_filter config)
   close conn
   printStats $ show (length results) ++ " unique results"
@@ -47,3 +48,12 @@ main = do
   printEvent "RECORD"
   _ <- commit bq sortedResults
   pure ()
+  
+printEvent :: String -> IO ()
+printEvent str =
+  putStrLn $ "\n" ++ str ++ "\n"
+
+printStats :: String -> IO ()
+printStats str =
+  putStrLn $ " - " ++ str
+

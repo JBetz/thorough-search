@@ -13,7 +13,7 @@ module Storage
   , selectQueryResultCount
   , ranQuery
   , commit
-  , emailResults
+  , commitRaw
   ) where
 
 import           Data.Char              (isAscii)
@@ -27,7 +27,6 @@ import           Data.Tuple             (swap)
 import           Database.SQLite.Simple as SQL hiding (Query)
 import           Filter                 hiding (filter, sort)
 import           Model                  hiding (fromString)
-import           Network.Mail.SMTP
 import           System.Directory       (createDirectoryIfMissing)
 
 -- DATABASE
@@ -119,25 +118,29 @@ selectQueryResultCount q@(Query _ e _) conn = do
   pure $ (fromOnly . head) res
 
 -- FILE
+commitRaw :: Query -> [Result] -> IO ()
+commitRaw query results = do
+  let outputFile = "./output/" ++ showFormattedQuery query ++ ".txt"
+  traverse_ (\result -> appendFile outputFile $ result_value result ++ "\n") results
+
 commit :: Query -> [[FilteredResult]] -> IO [()]
-commit q frs =
-  let counts = fmap length frs
-      filePath = outputFilePath q (sum counts)
-  in do
-    _ <- createDirectoryIfMissing False ("./output/" ++ showFormattedQuery q)
-    traverse (writeWordsToFile filePath) (zip (cumulativePercentages counts) frs)
+commit q filteredResults = do
+  let counts = fmap length filteredResults
+  let filePath = outputFilePath q (sum counts)
+  _ <- createDirectoryIfMissing False ("./output/" ++ showFormattedQuery q)
+  traverse (writeWordsToFile filePath) (zip (cumulativePercentages counts) filteredResults)
 
 writeWordsToFile :: String -> (Int, [FilteredResult]) -> IO ()
-writeWordsToFile filePath (cp, frs) = do
+writeWordsToFile filePath (cumulativePercentage, filteredResults) = do
   _ <- sequence $ do
-    (FilteredResult r _) <- sort frs
-    pure $ appendFile filePath (filter isAscii (result r) ++ "\n")
+    (FilteredResult result _) <- sort filteredResults
+    pure $ appendFile filePath (filter isAscii (result_value result) ++ "\n")
   let separators = take 20 (repeat '=')
-  appendFile filePath $ "\n" ++ separators ++ " " ++ show cp ++ "% " ++ separators ++ "\n\n"
+  appendFile filePath $ "\n" ++ separators ++ " " ++ show cumulativePercentage ++ "% " ++ separators ++ "\n\n"
 
 outputFilePath :: Query -> Int -> String
-outputFilePath q count =
-  "./output/" ++ showFormattedQuery q ++ "-" ++ sizeMessage count ++ ".txt"
+outputFilePath query count =
+  "./output/" ++ showFormattedQuery query ++ "-" ++ sizeMessage count ++ ".txt"
 
 cumulativePercentages :: [Int] -> [Int]
 cumulativePercentages counts =
@@ -152,19 +155,3 @@ sizeMessage count
   | count < 20000 = "under20K"
   | count < 30000 = "under30K"
   | otherwise     = "over30K-WARNING"
-
--- EMAIL
-emailResults :: FilePath -> IO ()
-emailResults fp =
-  let from       = Address Nothing ""
-      to         = [Address (Just "Jason Hickner") ""]
-      cc         = []
-      bcc        = []
-      subject    = "email subject"
-      body       = plainTextPart "email body"
-      html       = htmlPart "<h1>HTML</h1>"
-      host       = ""
-  in do
-    attachment <- filePart "application/octet-stream" fp
-    let mail = simpleMail from to cc bcc subject [body, html, attachment]
-    sendMail host mail

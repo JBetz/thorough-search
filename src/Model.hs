@@ -60,9 +60,9 @@ matches (Query b _ s) result =
       XWord -> last rWords == b
 
 extractExpansion :: Structure -> String -> [String]
-extractExpansion s str = 
-  let sWords = words str
-  in case s of 
-      WordX -> drop 1 sWords
-      WordOfX -> drop 2 sWords
-      XWord -> init sWords
+extractExpansion structure string = 
+  let stringWords = words string
+  in case structure of 
+      WordX -> drop 1 stringWords
+      WordOfX -> drop 2 stringWords
+      XWord -> init stringWords

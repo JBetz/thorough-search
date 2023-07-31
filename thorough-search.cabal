@@ -29,14 +29,12 @@ library
                      , lens
                      , path
                      , path-io
-                     , smtp-mail
                      , sqlite-simple
                      , text
                      , wreq
-                     , zip
   default-language:    Haskell2010
 
-executable ts
+executable thorough-search
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N

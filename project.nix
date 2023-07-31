@@ -10,8 +10,8 @@ mkDerivation {
   isExecutable = true;
   libraryHaskellDepends = [
     aeson base bytestring config-ini containers directory exceptions
-    http-client lens lens-aeson mtl path path-io smtp-mail
-    sqlite-simple text wreq zip
+    http-client lens lens-aeson mtl path path-io
+    sqlite-simple text wreq
   ];
   executableHaskellDepends = [ base lens sqlite-simple ];
   executableSystemDepends = [ zlib ];

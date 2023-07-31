@@ -4,6 +4,8 @@ module Filter
   ( filter
   , sort
   , fromInt
+  , loadWordList
+  , loadWordLists
   , Size(..)
   , Result(..)
   , FilteredResult(..)
@@ -12,8 +14,12 @@ module Filter
 import           Config
 import           Control.Monad
 import           Control.Monad.Reader
+import qualified Data.ByteString as BS
 import           Data.List            (groupBy, sortBy, (\\))
 import qualified Data.Set             as S
+import qualified Data.Text            as T
+import           Data.Text.Encoding                  (decodeUtf8With)
+import           Data.Text.Encoding.Error            (lenientDecode)
 import           Model
 import           Prelude              hiding (filter)
 
@@ -38,29 +44,29 @@ instance Eq FilteredResult where
 
 instance Ord FilteredResult where
   (<=) (FilteredResult r1 _) (FilteredResult r2 _) =
-    result r1 <= result r2
+    result_value r1 <= result_value r2
 
 filter :: Query -> [Result] -> Filter [FilteredResult]
-filter q results = do
+filter query results = do
   sws <- asks filter_scowlWordSets
-  wordLists <- liftIO $ loadWordLists sws
+  wordLists <- loadWordLists sws
   let accWordLists = accumulatedWordLists wordLists
-  pure $ byScowlSet q results [] accWordLists
+  pure $ byScowlSet query results [] accWordLists
 
 byScowlSet :: Query -> [Result] -> [FilteredResult] -> [WordList] -> [FilteredResult]
 byScowlSet _ _ filtered [] = filtered
-byScowlSet q unfiltered filtered wordLists =
+byScowlSet query unfiltered filtered wordLists =
   let (x:xs) = wordLists
-      newFiltered = runFilter q unfiltered x
+      newFiltered = runFilter query unfiltered x
       allFiltered = filtered ++ newFiltered
-  in byScowlSet q (unfiltered \\ ((\(FilteredResult r _) -> r) <$> newFiltered)) allFiltered xs
+  in byScowlSet query (unfiltered \\ ((\(FilteredResult result _) -> result) <$> newFiltered)) allFiltered xs
 
 runFilter :: Query -> [Result] -> WordList -> [FilteredResult]
-runFilter (Query _ _ s) unfiltered wordList = do
-  res <- unfiltered
-  let resultDiff = S.fromList $ extractExpansion s (result_value res)
-  guard $ null (resultDiff S.\\ _words wordList)
-  pure $ FilteredResult res (_size wordList)
+runFilter (Query _ _ structure) unfiltered wordList = do
+  result <- unfiltered
+  let resultDiff = S.fromList $ extractExpansion structure (result_value result)
+  guard $ null (resultDiff S.\\ wordList_words wordList)
+  pure $ FilteredResult result (wordList_size wordList)
 
 -- SORTERS
 sort :: [FilteredResult] -> [[FilteredResult]]
@@ -93,14 +99,17 @@ toInt size = read $ drop 1 (show size)
 fromInt :: Int -> Size
 fromInt int = read $ "S" ++ show int
 
-loadWordLists :: [String] -> IO [WordList]
+loadWordLists :: [String] -> Filter [WordList]
 loadWordLists names = traverse (`loadWordList` names) (enumFromTo S10 S95)
 
-loadWordList :: Size -> [String] -> IO WordList
+loadWordList :: Size -> [String] -> Filter WordList
 loadWordList size names = do
-  let fileNames = fmap (\n -> "./scowl/" ++ n ++ "." ++ show (toInt size)) names
-  fileContents <- traverse readFile fileNames
-  pure $ WordList size (S.fromList $ join (fmap lines fileContents))
+  scowlFilePath <- asks filter_scowlFilePath
+  let fileNames = fmap (\n -> "./" ++ scowlFilePath ++ "/" ++ n ++ "." ++ show (toInt size)) names
+  fileContents <- traverse (\fileName -> do
+    fileContent <- liftIO $ BS.readFile fileName
+    pure $ decodeUtf8With lenientDecode fileContent) fileNames
+  pure $ WordList size (S.fromList $ join (lines . T.unpack <$> fileContents))
 
 accumulatedWordLists :: [WordList] -> [WordList]
 accumulatedWordLists wordLists =
